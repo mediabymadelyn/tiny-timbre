@@ -1,0 +1,16 @@
+# Raw MP3s, cached log-mels, teacher logits (see data/ in README)
+data/
+
+# MLflow local tracking output
+mlruns/
+mlartifacts/
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Notebooks / OS
+.ipynb_checkpoints/
+.DS_Store
