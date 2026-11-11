@@ -5,5 +5,5 @@ artist-filtered, so recommendations can never be the same artist). Scored by gen
 overlap@k (mean Jaccard between the query's and each recommendation's genres), overall
 and for rare-genre and fine-grained queries. Baselines: features.csv vectors and random.
 
-Owner: LatAm teammate
+Owner: Miranda
 """
