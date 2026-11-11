@@ -54,18 +54,23 @@ def hierarchy_violation_rate(Y_score, genre_ids, parents, thr=0.5):
     return violations / max(total, 1)
 
 
-def audit_disagreements(Y_true, Y_score, track_ids, genre_ids, top_k=30):
-    """The top_k (track, genre) pairs where model and human tag disagree most."""
+def audit_disagreements(Y_true, Y_score, track_ids, genre_ids, top_k=30, exclude=None):
+    """Most confident disagreements. exclude: optional bool array like Y_true;
+    True = ignore (e.g. tags that were added as ancestors, not human tags)."""
     err = np.abs(Y_true.astype(np.float32) - Y_score)
-    order = np.argsort(err, axis=None)[::-1][:top_k]
+    if exclude is not None:
+        err = np.where(exclude, -1.0, err)
+    order = np.argsort(-err, axis=None)[:top_k]
     rows = []
-    for flat in order:
-        r, c = np.unravel_index(flat, err.shape)
+    for f in order:
+        r, c = np.unravel_index(f, err.shape)
+        if err[r, c] < 0:
+            continue
         rows.append({
             "track_id": track_ids[r],
             "genre_id": genre_ids[c],
             "human_tag": int(Y_true[r, c]),
             "model_prob": float(Y_score[r, c]),
+            "kind": "model_missed_tag" if Y_true[r, c] == 1 else "model_extra_tag",
         })
-        
-        return rows
+    return rows

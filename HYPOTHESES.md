@@ -84,5 +84,5 @@ seed policy. Only the row's own variable changes.
 
 Label each one as a model error, a debatable tag, or a likely wrong tag.
 
-- **Expected split** (author, date):
-- **Result:**
+- **Expected split** (17) Miranda, Nov 11
+- **Result:** 
