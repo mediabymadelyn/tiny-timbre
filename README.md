@@ -1,31 +1,67 @@
 # tiny-timbre
-A tiny model that identifies music genre from 30s clips
+
+Multi-label genre tagging on FMA-medium: a CNN trained from scratch listens to a 30 s clip and
+predicts its full set of genre tags. We test whether a graph convolution (GCN) over FMA's genre
+hierarchy beats an identical flat multi-label head, especially for rare and fine-grained genres,
+and use the learned embeddings for a nearest-neighbour recommendation prototype.
+
+## Setup
+
+```bash
+uv sync                 # installs pinned deps from uv.lock
+uv run pytest -q        # all tests use small fake data; no dataset needed
+```
+
+## Data
+
+1. Download `fma_metadata.zip` and `fma_medium.zip` from <https://github.com/mdeff/fma> and unzip
+   both into one folder (e.g. `data/`), giving `data/fma_metadata/` and `data/fma_medium/`.
+   SHA-1 of `fma_medium.zip`: `c67b69ea232021025fca9231fc1c7c1a063ab50b`.
+2. Cache log-mel spectrograms (CPU, once; about 2 h on free Colab, resumable):
+
+   ```bash
+   uv run python -m tiny_timbre.data --data-dir data --out-dir data/mels_medium
+   ```
+
+   Output: `logmel_f16.npy` of shape (25000, 128, 1292) float16 (8.27 GB), plus `index.csv`
+   mapping each row to `track_id` and a `status` (24,985 ok, 15 failed to decode).
+   The team copy lives on Drive at `dl-final/data/mels_medium`. Colab runner:
+   `notebooks/spectrograms.ipynb`.
 
 ## Reproducing results
 
-_TODO: how to reproduce every result in the report._
+_TODO: one command per experiment (E0–E4), and where each figure/table in the report comes from._
+_TODO: peak GPU memory and the machine the reported results were run on._
 
 ## Repository layout
 
 ```
 tiny-timbre/
-├── pyproject.toml        # uv project; pinned deps (torch, librosa/soundfile, transformers, mlflow, scikit-learn)
+├── pyproject.toml        # uv project; deps: torch, librosa, soundfile, pandas, scikit-learn, mlflow, pyyaml, tqdm
+│                         # dev deps: pytest, ipykernel, torch_geometric (only for checking our GCN)
 ├── uv.lock
-├── README.md             # how to reproduce every result in the report
+├── README.md             # how to get the data + reproduce every result
 ├── HYPOTHESES.md         # predictions, committed before each experiment runs
-├── configs/              # one YAML per experiment (e1_ce.yaml, e1_kd.yaml, ...)
+├── configs/              # default.yaml (data_dir) + one YAML per experiment
 ├── src/tiny_timbre/
-│   ├── data.py           # FMA loading, splits, log-mel caching, Dataset class   [film teammate]
-│   ├── baseline.py       # logistic regression + random forest on features.csv   [film teammate]
-│   ├── teacher.py        # MERT embeddings, probe, saving logits                 [LatAm teammate]
-│   ├── kd_loss.py        # from-scratch KD loss                                  [Maddi]
-│   ├── student.py        # CNN with a width multiplier                           [Maddi]
-│   ├── train.py          # training loop, CE or KD, MLflow logging, grad hooks   [Maddi]
-│   └── evaluate.py       # metrics, confusion matrix, FLOPs, CPU latency         [shared]
+│   ├── data.py           # tracks.csv loading, log-mel caching [Maddi]; Dataset + crops  [film teammate]
+│   ├── baseline.py       # one-vs-rest logistic regression on features.csv               [film teammate]
+│   ├── encoder.py        # CNN: spectrogram -> 256-d audio vector                        [film teammate]
+│   ├── labels.py         # label matrix Y from genres_all, ancestor check, genre filter  [LatAm teammate]
+│   ├── graph.py          # adjacency A from genres.csv, co-occurrence, normalized Â      [LatAm teammate]
+│   ├── gcn.py            # from-scratch GCN layer + GCN head; flat head                  [Maddi]
+│   ├── model.py          # encoder + head wired together                                 [Maddi]
+│   ├── train.py          # training loop, BCE, MLflow logging, gradient hooks            [Maddi]
+│   ├── evaluate.py       # macro mAP, per-level mAP, hierarchy violations, audit list    [LatAm teammate]
+│   └── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [LatAm teammate]
 ├── tests/
-│   ├── test_kd_loss.py   # gradcheck, library comparison, hand-gradient check
-│   └── test_student.py   # output shapes, parameter count
-├── notebooks/            # Colab entry points + figures; import from src/, no logic here
-├── data/                 # gitignored: raw MP3s, cached mels, teacher logits
-└── report/               # LaTeX or Markdown report + figures
+│   ├── test_data.py      # log-mel shapes, padding, resume, failed clips                 [Maddi]
+│   ├── test_gcn.py       # matches PyG GCNConv, gradcheck                                [Maddi]
+│   ├── test_graph.py     # Â symmetric, eigenvalues in [-1, 1], every genre has a parent  [LatAm teammate]
+│   ├── test_labels.py    # parents included, no tags in the inputs                       [LatAm teammate]
+│   ├── test_encoder.py   # output shape, parameter count ≈ 0.39M                         [film teammate]
+│   └── test_recommend.py # neighbours and overlap@k on fake embeddings                   [LatAm teammate]
+├── notebooks/            # Colab runners + figures; import from src/, no logic here
+├── data/                 # gitignored: raw MP3s, cached mels, checkpoints
+└── report/               # report + figures
 ```
