@@ -20,7 +20,7 @@ seed policy. Only the row's own variable changes.
 
 - **Runs:** 1 + 1
 - **Metric:** macro mAP on the test split
-- **Prediction** (author, date):
+- **Prediction** The CNN + flat head beats logistic regression on features.csv by at least 5 points of macro mAP.
 - **Committed in:** _(commit hash)_
 - **Result:**
 - **Verdict:** supported / not supported / mixed
@@ -30,7 +30,7 @@ seed policy. Only the row's own variable changes.
 - **Runs:** 6
 - **Metrics:** macro mAP overall, top-level, fine-grained, rare, common; micro-F1;
   hierarchy-violation rate
-- **Prediction** (author, date):
+- **Prediction** The GCN head gains 2-4 points of macro mAP over the flat head, mostly on genres with fewer than 200 training tracks. Top-level genres barely change.
 - **Committed in:**
 - **Result:**
 - **Verdict:**
@@ -61,7 +61,7 @@ seed policy. Only the row's own variable changes.
   artists). Embeddings compared: GCN model, flat model, features.csv, random.
 - **Metric:** genre overlap@10 (mean Jaccard between the query's genres and each recommendation's
   genres), overall, for rare-genre queries, and for fine-grained queries
-- **Prediction** (author, date):
+- **Prediction** GCN embeddings beat flat embeddings on genre overlap@10, mostly for rare-genre queries. Both beat features.csv, and all beat random.
 - **Committed in:**
 - **Result:**
 - **Verdict:**
