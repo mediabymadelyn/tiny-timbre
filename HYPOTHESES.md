@@ -20,9 +20,13 @@ seed policy. Only the row's own variable changes.
 
 - **Runs:** 1 + 1
 - **Metric:** macro mAP on the test split
-- **Prediction** (author, date):
+- **Prediction** (Maddi Smith, 11/11):
+ Logistic regression on features.csv will beat the CNN +
+  flat head by at least 5 points of macro mAP. features.csv contains hand-designed sound
+  statistics, while our CNN is trained from scratch and has to learn its own features from the
+  spectrograms, which I expect to be hard with ~20K clips and 97 overlapping genres.
 - **Committed in:** _(commit hash)_
-- **Result:**
+- **Result:** 
 - **Verdict:** supported / not supported / mixed
 
 ## E1: Flat head vs. GCN head (hierarchy edges), 3 seeds each
