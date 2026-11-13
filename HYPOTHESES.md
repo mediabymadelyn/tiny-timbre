@@ -31,7 +31,7 @@ seed policy. Only the row's own variable changes.
 - **Committed in:** _(commit hash)_
 - **Prediction** (Ayesha, 11/13): The CNN + flat head beats logistic regression on features.csv
   by at least 5 points of macro mAP.
-- **Committed in:**
+- **Committed in:** 8522a9d
 - **Result:** 
 - **Verdict:** supported / not supported / mixed
 
@@ -56,7 +56,7 @@ seed policy. Only the row's own variable changes.
 - **Prediction** (Ayesha, 11/13): The GCN head gains 2–4 points of macro mAP over the flat head,
   mostly on rare genres (fewer than 200 training tracks); top-level genres barely change. The flat
   head will have the lower hierarchy-violation rate.
-- **Committed in:**
+- **Committed in:** 8522a9d
 - **Result:**
 - **Verdict:**
 
@@ -104,7 +104,7 @@ seed policy. Only the row's own variable changes.
   songs from the wrong subgenre more often. All three should clearly beat random.
 - **Committed in:**
 - **Prediction** (Ayesha, 11/13): Ranking by genre overlap@10: GCN > flat > features.csv > random.
-- **Committed in:**
+- **Committed in:** 8522a9d
 - **Result:**
 - **Verdict:**
 
