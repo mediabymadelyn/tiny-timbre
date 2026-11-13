@@ -1,0 +1,23 @@
+# E0: CNN + flat head (compared against logistic regression on features.csv).
+# Run: uv run python -m tiny_timbre.train --config configs/e0_cnn_flat.yaml
+
+name: e0_cnn_flat
+head: flat            # flat | gcn
+seed: 0
+
+# Optimisation (keep these identical across all experiments)
+lr: 0.001
+epochs: 20            # revisit after the 1,000-clip sanity run
+batch_size: 32
+
+# Data (read by the Dataset once Miranda's is merged)
+data_dir: /content/drive/MyDrive/dl-final/data
+mels_dir: /content/mels_medium          # copy from Drive to local disk first; much faster
+crop_frames: 431                        # 10 s random crops
+
+# Saved on Drive so a Colab disconnect doesn't lose the run
+checkpoint_path: /content/drive/MyDrive/dl-final/checkpoints/e0_cnn_flat.pt
+
+# MLflow results database (sqlite:/// + absolute path). One file per person: never let two
+# Colab sessions write to the same file at the same time.
+tracking_uri: sqlite:////content/drive/MyDrive/dl-final/mlflow/maddi.db
