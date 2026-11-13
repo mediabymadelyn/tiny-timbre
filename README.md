@@ -44,23 +44,23 @@ tiny-timbre/
 ├── HYPOTHESES.md         # predictions, committed before each experiment runs
 ├── configs/              # default.yaml (data_dir) + one YAML per experiment
 ├── src/tiny_timbre/
-│   ├── data.py           # tracks.csv loading, log-mel caching [Maddi]; Dataset + crops  [film teammate]
-│   ├── baseline.py       # one-vs-rest logistic regression on features.csv               [film teammate]
-│   ├── encoder.py        # CNN: spectrogram -> 256-d audio vector                        [film teammate]
-│   ├── labels.py         # label matrix Y from genres_all, ancestor check, genre filter  [LatAm teammate]
-│   ├── graph.py          # adjacency A from genres.csv, co-occurrence, normalized Â      [LatAm teammate]
-│   ├── gcn.py            # from-scratch GCN layer + GCN head; flat head                  [Maddi]
+│   ├── data.py           # tracks.csv loading, log-mel caching [Maddi]; Dataset + crops  [Miranda]
+│   ├── baseline.py       # one-vs-rest logistic regression on features.csv               [Ayesha]
+│   ├── encoder.py        # CNN: spectrogram -> 256-d audio vector                        [Maddi]
+│   ├── labels.py         # label matrix Y from genres_all, ancestor check, genre filter  [Miranda]
+│   ├── graph.py          # adjacency A from genres.csv, co-occurrence, normalized Â      [Miranda]
+│   ├── gcn.py            # from-scratch GCN layer + GCN head; flat head                  [Ayesha]
 │   ├── model.py          # encoder + head wired together                                 [Maddi]
 │   ├── train.py          # training loop, BCE, MLflow logging, gradient hooks            [Maddi]
-│   ├── evaluate.py       # macro mAP, per-level mAP, hierarchy violations, audit list    [LatAm teammate]
-│   └── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [LatAm teammate]
+│   ├── evaluate.py       # macro mAP, per-level mAP, hierarchy violations, audit list    [Miranda]
+│   └── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [Miranda]
 ├── tests/
 │   ├── test_data.py      # log-mel shapes, padding, resume, failed clips                 [Maddi]
-│   ├── test_gcn.py       # matches PyG GCNConv, gradcheck                                [Maddi]
-│   ├── test_graph.py     # Â symmetric, eigenvalues in [-1, 1], every genre has a parent  [LatAm teammate]
-│   ├── test_labels.py    # parents included, no tags in the inputs                       [LatAm teammate]
-│   ├── test_encoder.py   # output shape, parameter count ≈ 0.39M                         [film teammate]
-│   └── test_recommend.py # neighbours and overlap@k on fake embeddings                   [LatAm teammate]
+│   ├── test_gcn.py       # matches PyG GCNConv, gradcheck                                [Ayesha]
+│   ├── test_graph.py     # Â symmetric, eigenvalues in [-1, 1], every genre has a parent  [Miranda]
+│   ├── test_labels.py    # parents included, no tags in the inputs                       [Miranda]
+│   ├── test_encoder.py   # output shape, parameter count ≈ 0.39M                         [Maddi]
+│   └── test_recommend.py # neighbours and overlap@k on fake embeddings                   [Miranda]
 ├── notebooks/            # Colab runners + figures; import from src/, no logic here
 ├── data/                 # gitignored: raw MP3s, cached mels, checkpoints
 └── report/               # report + figures

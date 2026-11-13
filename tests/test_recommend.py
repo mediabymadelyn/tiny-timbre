@@ -1,7 +1,7 @@
 """Tests for recommend: nearest neighbours on fake embeddings, genre overlap@k on hand-made
 examples, no candidate from the query split.
 
-Owner: LatAm teammate
+Owner: Miranda
 """
 import numpy as np
 from tiny_timbre.recommend import (genre_overlap_per_query, overlap_report,
