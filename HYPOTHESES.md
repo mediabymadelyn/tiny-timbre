@@ -29,6 +29,9 @@ seed policy. Only the row's own variable changes.
   statistics, while our CNN is trained from scratch and has to learn its own features from the
   spectrograms, which I expect to be hard with ~20K clips and 97 overlapping genres.
 - **Committed in:** _(commit hash)_
+- **Prediction** (Ayesha, 11/13): The CNN + flat head beats logistic regression on features.csv
+  by at least 5 points of macro mAP.
+- **Committed in:** 2cf04c9
 - **Result:** 
 - **Verdict:** supported / not supported / mixed
 
@@ -50,6 +53,10 @@ seed policy. Only the row's own variable changes.
   rate will be lower, because the tree connects each subgenre to its parent, so when the GCN
   predicts a subgenre it should also predict the parent.
 - **Committed in:**
+- **Prediction** (Ayesha, 11/13): The GCN head gains 2–4 points of macro mAP over the flat head,
+  mostly on rare genres (fewer than 200 training tracks); top-level genres barely change. The flat
+  head will have the lower hierarchy-violation rate.
+- **Committed in:** 2cf04c9
 - **Result:**
 - **Verdict:**
 
@@ -96,6 +103,8 @@ seed policy. Only the row's own variable changes.
   queries, because if the GCN blurs similar subgenres together, its embeddings will recommend
   songs from the wrong subgenre more often. All three should clearly beat random.
 - **Committed in:**
+- **Prediction** (Ayesha, 11/13): Ranking by genre overlap@10: GCN > flat > features.csv > random.
+- **Committed in:** 2cf04c9
 - **Result:**
 - **Verdict:**
 
