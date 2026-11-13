@@ -20,6 +20,9 @@ seed policy. Only the row's own variable changes.
 
 - **Runs:** 1 + 1
 - **Metric:** macro mAP on the test split
+- **Prediction** The CNN + flat head beats logistic regression on features.csv by at least 5 points of macro mAP.
+- **Committed in:** 9fce93f
+- **Result:**
 - **Prediction** (Maddi Smith, 11/11):
  Logistic regression on features.csv will beat the CNN +
   flat head by at least 5 points of macro mAP. features.csv contains hand-designed sound
@@ -34,6 +37,8 @@ seed policy. Only the row's own variable changes.
 - **Runs:** 6
 - **Metrics:** macro mAP overall, top-level, fine-grained, rare, common; micro-F1;
   hierarchy-violation rate
+- **Prediction** The GCN head gains 2-4 points of macro mAP over the flat head, mostly on genres with fewer than 200 training tracks. Top-level genres barely change.
+- **Committed in:** 9fce93f
 - **Prediction** (Maddi, 11/12): To be honest, I'm not sure that giving the model the genre
   tree will help for all genre types, especially some of the more niche ones. For the super
   mainstream genres like Rock (the most present in the FMA dataset), I don't think the tree will
@@ -82,6 +87,8 @@ seed policy. Only the row's own variable changes.
   artists). Embeddings compared: GCN model, flat model, features.csv, random.
 - **Metric:** genre overlap@10 (mean Jaccard between the query's genres and each recommendation's
   genres), overall, for rare-genre queries, and for fine-grained queries
+- **Prediction** GCN embeddings beat flat embeddings on genre overlap@10, mostly for rare-genre queries. Both beat features.csv, and all beat random.
+- **Committed in:** 9fce93f
 - **Prediction** (Maddi, 11/12): Based on my E0 and E1 predictions, I think the ranking by genre
   overlap@10 will be features.csv > flat > GCN > random. Since I predicted logistic regression on
   features.csv beats the CNN in E0, I expect features.csv vectors to find songs with more similar
@@ -115,6 +122,8 @@ seed policy. Only the row's own variable changes.
 
 Label each one as a model error, a debatable tag, or a likely wrong tag.
 
+- **Expected split** (17) Miranda, Nov 11
+- **Result:** 
 - **Expected split** (Maddi, 11/12): About 15 model errors, 10 debatable tags, and 5 tags that look
   wrong. Since I expect our from-scratch CNN to be fairly weak (E0), I think most disagreements will
   be the model's mistakes, but FMA's genre tags are chosen by the artists themselves, so some will
