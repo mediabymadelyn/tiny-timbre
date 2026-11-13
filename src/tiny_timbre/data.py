@@ -1,6 +1,6 @@
 """FMA loading, train/val/test splits, log-mel caching, and the Dataset class.
 
-Owner: Maddi (log-mel caching), Miranda (Dataset + crops)
+Owner: Maddi. The genre labels used by load_splits come from Miranda's labels.py.
 
 Log-mel cache (CPU, run once, no learning)
 ------------------------------------------
@@ -33,7 +33,12 @@ from pathlib import Path
 import librosa
 import numpy as np
 import pandas as pd
+import torch
+from torch.utils.data import Dataset
 from tqdm import tqdm
+
+from tiny_timbre.labels import (add_ancestors, build_label_matrix, load_genres, load_tracks,
+                                medium_tracks, parent_map, parse_genre_lists, select_genres)
 
 
 @dataclass(frozen=True)
@@ -70,7 +75,7 @@ def audio_path(audio_dir: str | Path, track_id: int) -> Path:
     return Path(audio_dir) / tid[:3] / f"{tid}.mp3"
 
 
-def load_tracks(metadata_dir: str | Path, subset: str = "medium") -> pd.DataFrame:
+def load_subset_tracks(metadata_dir: str | Path, subset: str = "medium") -> pd.DataFrame:
     """Tracks in an FMA subset (medium includes small), with genre_top and split.
 
     Returns a DataFrame indexed by track_id with flat columns ``genre_top`` and ``split``.
@@ -207,6 +212,84 @@ def load_logmel_cache(out_dir: str | Path) -> tuple[np.ndarray, pd.DataFrame]:
 
 
 # ---------------------------------------------------------------------------
+# Splits and the Dataset used for training
+# ---------------------------------------------------------------------------
+
+def load_splits(mels_dir: str | Path, metadata_dir: str | Path, min_tracks: int = 50):
+    """Match cached spectrogram rows to their genre labels, per official split.
+
+    Returns (mels, splits, genre_ids):
+        mels       memmap of all spectrograms, shape (N, 128, 1292)
+        splits     {"training" | "validation" | "test": {"rows", "Y", "track_ids"}}
+                   rows: which rows of mels belong to this split (failed clips left out)
+                   Y:    (len(rows), C) 0/1 label matrix, row-aligned with rows
+        genre_ids  the C kept genres, in the same order as Y's columns
+    """
+    mels, index = load_logmel_cache(mels_dir)
+    index = index[index["status"] == "ok"]
+
+    # labels for every medium track, with ancestors added (Miranda's labels.py)
+    metadata_dir = Path(metadata_dir)
+    tracks = medium_tracks(load_tracks(metadata_dir / "tracks.csv"))
+    parents = parent_map(load_genres(metadata_dir / "genres.csv"))
+    tags = dict(zip(tracks.index, add_ancestors(parse_genre_lists(tracks), parents)))
+
+    # keep genres with >= min_tracks TRAINING tracks (C = 97 at the default 50)
+    train_ids = tracks.index[tracks[("set", "split")] == "training"]
+    genre_ids = select_genres([tags[t] for t in train_ids], min_tracks)
+
+    splits = {}
+    for name in ["training", "validation", "test"]:
+        part = index[index["split"] == name]
+        track_ids = part["track_id"].to_numpy()
+        splits[name] = {
+            "rows": part["row"].to_numpy(),
+            "Y": build_label_matrix([tags[t] for t in track_ids], genre_ids),
+            "track_ids": track_ids,
+        }
+    return mels, splits, genre_ids
+
+
+class FMADataset(Dataset):
+    """Hands training one song at a time: (spectrogram, labels).
+
+    mels:        the memmap from load_splits, shape (N, 128, 1292)
+    rows:        which rows of mels are in this split
+    Y:           (len(rows), C) 0/1 labels, row-aligned with rows
+    crop_frames: 431 -> random 10 s crop (training); None -> full 30 s clip (validation/test)
+    """
+
+    def __init__(self, mels, rows, Y, crop_frames: int | None = None):
+        self.mels = mels
+        self.rows = rows
+        self.Y = Y
+        self.crop_frames = crop_frames
+
+    def __len__(self) -> int:
+        # how many songs are in this split
+        return len(self.rows)
+
+    def __getitem__(self, i: int):
+        """Song i -> (x of shape (1, 128, T), y of shape (C,)), both float32 tensors."""
+        # get song i's spectrogram as a floa tensor, shape (128, 1292)
+        x = torch.tensor(self.mels[self.rows[i]], dtype=torch.float32)
+
+        # training: cut a random 10 s window out of the 30 s clip
+        if self.crop_frames is not None:
+            total_frames = x.shape[1]
+            start = torch.randint(0, total_frames - self.crop_frames + 1, (1,)).item()
+            x = x[:, start : start + self.crop_frames]
+
+        # rescale -80..0 dB to roughly -1..1
+        x = (x + 40) / 40
+        # add the channel dimension: (128, T) -> (1, 128, T)
+        x = x.unsqueeze(0)
+        # song i's labels as a float tensor
+        y = torch.from_numpy(self.Y[i]).float()
+        return x, y
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -224,7 +307,7 @@ def main(argv: list[str] | None = None) -> None:
     audio_dir = data_dir / f"fma_{args.subset}"
     out_dir = Path(args.out_dir) if args.out_dir else data_dir / f"mels_{args.subset}"
 
-    tracks = load_tracks(data_dir / "fma_metadata", args.subset)
+    tracks = load_subset_tracks(data_dir / "fma_metadata", args.subset)
     tracks["path"] = [str(audio_path(audio_dir, t)) for t in tracks.index]
     present = tracks["path"].map(os.path.exists)
     if not present.all():
@@ -239,7 +322,6 @@ def main(argv: list[str] | None = None) -> None:
     cache_logmels(
         list(tracks.pop("path")), out_dir, MelParams(), args.workers, extra_index=tracks
     )
-
 
 if __name__ == "__main__":
     main()
