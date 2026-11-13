@@ -67,3 +67,54 @@ def test_cache_end_to_end_with_resume_and_errors(tmp_path):
 
     with pytest.raises(ValueError):
         cache_logmels(paths[:2], out, workers=2)
+
+
+# --- Dataset + splits -------------------------------------------------------------------
+
+from pathlib import Path
+
+import torch
+
+from tiny_timbre.data import FMADataset, load_splits
+
+LOCAL_MELS = Path("data/mels_medium")
+LOCAL_META = Path("data/fma_metadata")
+
+
+def _fake_mels():
+    mels = np.random.default_rng(0).uniform(-80, 0, (5, 128, 1292)).astype(np.float16)
+    Y = np.zeros((3, 97), dtype=np.uint8)
+    Y[0, 4] = Y[2, 10] = 1
+    return mels, np.array([4, 0, 2]), Y        # this split uses rows 4, 0, 2 of mels
+
+
+def test_dataset_crop_shape_and_scaling():
+    mels, rows, Y = _fake_mels()
+    ds = FMADataset(mels, rows, Y, crop_frames=431)
+    assert len(ds) == 3
+    x, y = ds[0]
+    assert x.shape == (1, 128, 431) and x.dtype == torch.float32
+    assert y.shape == (97,) and y.dtype == torch.float32 and y[4] == 1
+    assert x.min() >= -1 and x.max() <= 1               # rescaled from -80..0 dB
+
+
+def test_dataset_full_clip_uses_the_right_row():
+    mels, rows, Y = _fake_mels()
+    x, _ = FMADataset(mels, rows, Y, crop_frames=None)[0]
+    assert x.shape == (1, 128, 1292)
+    expected = (torch.from_numpy(mels[4]).float() + 40) / 40   # item 0 of the split is row 4
+    assert torch.allclose(x[0], expected)
+
+
+@pytest.mark.skipif(not LOCAL_MELS.exists() or not LOCAL_META.exists(),
+                    reason="needs the local spectrogram cache and FMA metadata")
+def test_load_splits_on_local_data():
+    mels, splits, genre_ids = load_splits(LOCAL_MELS, LOCAL_META)
+    assert len(genre_ids) == 97
+    index = pd.read_csv(LOCAL_MELS / "index.csv").set_index("row")
+    for name, s in splits.items():
+        assert len(s["rows"]) == len(s["Y"]) == len(s["track_ids"])
+        assert s["Y"].shape[1] == 97
+        assert (index.loc[s["rows"], "track_id"].to_numpy() == s["track_ids"]).all()
+        assert (index.loc[s["rows"], "split"] == name).all()
+    assert sum(len(s["rows"]) for s in splits.values()) == (index["status"] == "ok").sum()

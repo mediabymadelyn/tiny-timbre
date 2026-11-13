@@ -10,10 +10,12 @@ lr: 0.001
 epochs: 20            # revisit after the 1,000-clip sanity run
 batch_size: 32
 
-# Data (read by the Dataset once Miranda's is merged)
-data_dir: /content/drive/MyDrive/dl-final/data
-mels_dir: /content/mels_medium          # copy from Drive to local disk first; much faster
-crop_frames: 431                        # 10 s random crops
+# Data (the training notebook copies both to Colab's local disk first; much faster than Drive)
+mels_dir: /content/mels_medium
+metadata_dir: /content/fma_metadata
+crop_frames: 431                        # 10 s random crops for training; full 30 s for validation
+num_workers: 2
+# max_train_clips: 1000                 # uncomment for the sanity run
 
 # Saved on Drive so a Colab disconnect doesn't lose the run
 checkpoint_path: /content/drive/MyDrive/dl-final/checkpoints/e0_cnn_flat.pt
