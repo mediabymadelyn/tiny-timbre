@@ -1,4 +1,4 @@
-"""Training loop: BCE over all C genres, flat or GCN head, MLflow logging, gradient hooks,
+"""Training loop: BCE over all C genres, flat or GCN head, W&B logging, gradient hooks,
 checkpointing so interrupted Colab runs can resume.
 
 Run one experiment:
@@ -8,10 +8,11 @@ Owner: Maddi
 """
 import argparse
 import os
+import uuid
 
 import torch
 import torch.nn as nn
-import mlflow
+import wandb
 import yaml
 
 from torch.utils.data import DataLoader
@@ -137,14 +138,26 @@ def run(config: dict, train_loader=None, validation_loader=None) -> None:
     else:
         start_epoch = 0
 
-    # MLflow stores runs in a small SQLite database file (its plain-folder mode is retired)
-    tracking_uri = config.get("tracking_uri", "sqlite:///mlflow.db")
-    if tracking_uri.startswith("sqlite:///"):
-        os.makedirs(os.path.dirname(tracking_uri[len("sqlite:///"):]) or ".", exist_ok=True)
-    mlflow.set_tracking_uri(tracking_uri)
+    # W&B run id is kept next to the checkpoint, so a resumed Colab run continues the same
+    # W&B run (same charts) instead of starting a new one
+    id_path = checkpoint_path + ".wandb_id"
+    if os.path.exists(id_path):
+        with open(id_path) as f:
+            run_id = f.read().strip()
+    else:
+        run_id = uuid.uuid4().hex[:8]  # random 8-character id
+        with open(id_path, "w") as f:
+            f.write(run_id)
 
-    with mlflow.start_run(run_name=config["name"]):
-        mlflow.log_params(config)  # record this run's settings next to its results
+    with wandb.init(
+        project=config.get("wandb_project", "tiny-timbre"),
+        entity=config.get("wandb_entity"),  # your W&B team, so everyone sees each other's runs
+        name=config["name"],
+        id=run_id,
+        resume="allow",
+        config=config,  # record this run's settings next to its results
+        mode=config.get("wandb_mode", "online"),  # "disabled" in tests
+    ) as wb:
         for epoch in range(start_epoch, config["epochs"]):
             norms = []  # one {layer: gradient norm} dict per batch
             train_loss = train_one_epoch(model, train_loader, optimizer, loss_fn, norms_out=norms)
@@ -154,8 +167,8 @@ def run(config: dict, train_loader=None, validation_loader=None) -> None:
             # average each layer's gradient norm over the epoch's batches
             avg_norms = {f"grad/{name}": sum(n[name] for n in norms) / len(norms)
                          for name in norms[0]}
-            mlflow.log_metrics({"train_loss": train_loss, "val_map": val_map, **avg_norms},
-                               step=epoch)
+            wb.log({"epoch": epoch, "train_loss": train_loss, "val_map": val_map, **avg_norms},
+                   step=epoch)
             save_checkpoint(checkpoint_path, model, optimizer, epoch)
 
 

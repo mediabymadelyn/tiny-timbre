@@ -37,7 +37,7 @@ _TODO: peak GPU memory and the machine the reported results were run on._
 
 ```
 tiny-timbre/
-├── pyproject.toml        # uv project; deps: torch, librosa, soundfile, pandas, scikit-learn, mlflow, pyyaml, tqdm
+├── pyproject.toml        # uv project; deps: torch, librosa, soundfile, pandas, scikit-learn, wandb, pyyaml, tqdm
 │                         # dev deps: pytest, ipykernel, torch_geometric (only for checking our GCN)
 ├── uv.lock
 ├── README.md             # how to get the data + reproduce every result
@@ -51,7 +51,7 @@ tiny-timbre/
 │   ├── graph.py          # adjacency A from genres.csv, co-occurrence, normalized Â      [Miranda]
 │   ├── gcn.py            # from-scratch GCN layer + GCN head; flat head                  [Ayesha]
 │   ├── model.py          # encoder + head wired together                                 [Maddi]
-│   ├── train.py          # training loop, BCE, MLflow logging, gradient hooks            [Maddi]
+│   ├── train.py          # training loop, BCE, W&B logging, gradient hooks               [Maddi]
 │   ├── evaluate.py       # macro mAP, per-level mAP, hierarchy violations, audit list    [Miranda]
 │   └── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [Miranda]
 ├── tests/

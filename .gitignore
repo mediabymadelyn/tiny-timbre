@@ -1,9 +1,8 @@
 # Raw MP3s, cached log-mels, teacher logits (see data/ in README)
 data/
 
-# MLflow local tracking output
-mlruns/
-mlartifacts/
+# Weights & Biases local run files
+wandb/
 
 # Python / uv
 .venv/
@@ -20,4 +19,3 @@ __pycache__/
 
 # Local training outputs
 checkpoints/
-mlflow.db

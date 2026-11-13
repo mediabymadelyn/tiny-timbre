@@ -69,10 +69,12 @@ def test_run_end_to_end_on_fake_data(tmp_path):
     loader, _, _ = _fake_setup()
     config = {"name": "test", "head": "flat", "seed": 0, "lr": 1e-3, "epochs": 2,
               "checkpoint_path": str(tmp_path / "ckpt" / "test.pt"),
-              "tracking_uri": f"sqlite:///{tmp_path / 'mlflow.db'}"}
+              "wandb_mode": "disabled"}              # no W&B account needed in tests
 
     run(config, train_loader=loader, validation_loader=loader)
     assert (tmp_path / "ckpt" / "test.pt").exists()
+    run_id = (tmp_path / "ckpt" / "test.pt.wandb_id").read_text()
 
     run(config, train_loader=loader, validation_loader=loader)   # resumes: nothing left to do
     assert torch.load(tmp_path / "ckpt" / "test.pt")["epoch"] == 1
+    assert (tmp_path / "ckpt" / "test.pt.wandb_id").read_text() == run_id   # same W&B run

@@ -20,6 +20,6 @@ num_workers: 2
 # Saved on Drive so a Colab disconnect doesn't lose the run
 checkpoint_path: /content/drive/MyDrive/dl-final/checkpoints/e0_cnn_flat.pt
 
-# MLflow results database (sqlite:/// + absolute path). One file per person: never let two
-# Colab sessions write to the same file at the same time.
-tracking_uri: sqlite:////content/drive/MyDrive/dl-final/mlflow/maddi.db
+# Weights & Biases: charts appear live at wandb.ai/<entity>/tiny-timbre while Colab trains
+wandb_project: tiny-timbre
+wandb_entity: null        # set to your shared W&B team name so everyone sees every run
