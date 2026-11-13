@@ -1,0 +1,23 @@
+# E0 control: one-vs-rest logistic regression on features.csv (compared against e0_cnn_flat).
+# Run: uv run python -m tiny_timbre.baseline --config configs/e0_baseline.yaml
+# CPU only; runs on a laptop. Needs data/fma_metadata/ (tracks.csv, genres.csv, features.csv).
+
+name: e0_baseline
+seed: 0
+min_tracks: 50                 # same genre filter as the CNN (C = 97)
+
+# Regularisation strength, picked on the validation split. Never tuned on test.
+C_grid: [0.001, 0.003, 0.01, 0.1, 1.0]
+
+# validation while developing; switch to test only once the E0 predictions are on main
+eval_split: validation
+
+metadata_dir: data/fma_metadata
+features_path: data/fma_metadata/features.csv
+# mels_medium/index.csv from Drive (small file), so the same failed clips are dropped as for the CNN
+mels_index: null
+
+# per-track test probabilities, for evaluate.py and the metadata audit (optional)
+scores_path: null
+
+tracking_uri: sqlite:///mlruns/ayesha.db
