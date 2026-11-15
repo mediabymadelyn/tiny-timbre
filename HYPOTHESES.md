@@ -32,7 +32,10 @@ seed policy. Only the row's own variable changes.
 - **Prediction** (Ayesha, 11/13): The CNN + flat head beats logistic regression on features.csv
   by at least 5 points of macro mAP.
 - **Committed in:** 8522a9d
-- **Result:** 
+- **Result:** Logistic regression on features.csv (Ayesha, 11/15; `configs/e0_baseline.yaml`, seed 0,
+  C = 0.003 picked on validation, 15 failed clips dropped; 19,909 train / 2,572 test):
+  test macro mAP **0.164** (top-level 0.436, fine-grained 0.113, rare 0.074, common 0.260),
+  micro-F1 0.396, hierarchy-violation rate 0.022. CNN + flat head: pending (`e0_cnn_flat`).
 - **Verdict:** supported / not supported / mixed
 
 ## E1: Flat head vs. GCN head (hierarchy edges), 3 seeds each
