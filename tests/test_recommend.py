@@ -39,3 +39,11 @@ def test_embedding_beats_random_and_report():
     assert good.mean() > rand.mean()
     rep = overlap_report(good, {"all": np.ones(10, bool), "first_half": np.arange(10) < 5})
     assert set(rep) == {"all", "first_half"}
+
+def test_query_masks():
+    from tiny_timbre.recommend import query_masks
+    Yq = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    groups = {"all": np.ones(3, bool), "rare": np.array([False, True, True])}
+    m = query_masks(Yq, groups)
+    assert m["all"].tolist() == [True, True, True]
+    assert m["rare"].tolist() == [False, True, True]
