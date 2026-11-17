@@ -52,3 +52,13 @@ def standardize(X_fit, X):
     """z-score using candidate (train+val) statistics only, to avoid test leakage."""
     mu, sd = X_fit.mean(axis=0), X_fit.std(axis=0)
     return (X - mu) / np.maximum(sd, 1e-8)
+
+def query_masks(Y_query, group_masks):
+    """group_masks: dict from evaluate.genre_groups (bool arrays over genres).
+    A query belongs to a group if it has at least one genre in that group."""
+    Yb = Y_query.astype(bool)
+    masks = {"all": np.ones(len(Yb), dtype=bool)}
+    for name, m in group_masks.items():
+        if name != "all":
+            masks[name] = (Yb & np.asarray(m, dtype=bool)[None, :]).any(axis=1)
+    return masks

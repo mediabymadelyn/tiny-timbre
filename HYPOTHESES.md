@@ -20,7 +20,7 @@ seed policy. Only the row's own variable changes.
 
 - **Runs:** 1 + 1
 - **Metric:** macro mAP on the test split
-- **Prediction** The CNN + flat head beats logistic regression on features.csv by at least 5 points of macro mAP.
+- **Prediction** (Miranda, Nov 11, 2026): The CNN + flat head beats logistic regression on features.csv by at least 5 points of macro mAP.
 - **Committed in:** 9fce93f
 - **Result:**
 - **Prediction** (Maddi Smith, 11/11):
@@ -40,7 +40,7 @@ seed policy. Only the row's own variable changes.
 - **Runs:** 6
 - **Metrics:** macro mAP overall, top-level, fine-grained, rare, common; micro-F1;
   hierarchy-violation rate
-- **Prediction** The GCN head gains 2-4 points of macro mAP over the flat head, mostly on genres with fewer than 200 training tracks. Top-level genres barely change.
+- **Prediction** (Miranda, Nov 11, 2026): The GCN head gains 2-4 points of macro mAP over the flat head, mostly on genres with fewer than 200 training tracks. Top-level genres barely change.
 - **Committed in:** 9fce93f
 - **Prediction** (Maddi, 11/12): To be honest, I'm not sure that giving the model the genre
   tree will help for all genre types, especially some of the more niche ones. For the super
@@ -94,7 +94,7 @@ seed policy. Only the row's own variable changes.
   artists). Embeddings compared: GCN model, flat model, features.csv, random.
 - **Metric:** genre overlap@10 (mean Jaccard between the query's genres and each recommendation's
   genres), overall, for rare-genre queries, and for fine-grained queries
-- **Prediction** GCN embeddings beat flat embeddings on genre overlap@10, mostly for rare-genre queries. Both beat features.csv, and all beat random.
+- **Prediction** (Miranda, Nov 11, 2026): GCN embeddings beat flat embeddings on genre overlap@10, mostly for rare-genre queries. Both beat features.csv, and all beat random.
 - **Committed in:** 9fce93f
 - **Prediction** (Maddi, 11/12): Based on my E0 and E1 predictions, I think the ranking by genre
   overlap@10 will be features.csv > flat > GCN > random. Since I predicted logistic regression on
@@ -131,7 +131,7 @@ seed policy. Only the row's own variable changes.
 
 Label each one as a model error, a debatable tag, or a likely wrong tag.
 
-- **Expected split** (17) Miranda, Nov 11
+- **Expected split** (Miranda, Nov 15, 2026): about 10 model errors, 12 debatable tags, and 8 likely wrong tags.
 - **Result:** 
 - **Expected split** (Maddi, 11/12): About 15 model errors, 10 debatable tags, and 5 tags that look
   wrong. Since I expect our from-scratch CNN to be fairly weak (E0), I think most disagreements will
