@@ -23,4 +23,4 @@ checkpoint_path: checkpoints/e2_gcn_cooc_s0.pt
 results_dir: data/results
 
 wandb_project: tiny-timbre
-wandb_entity: null        # set to the shared W&B team name so everyone sees every run
+wandb_entity: tiny-timbre-team        # set to the shared W&B team name so everyone sees every run

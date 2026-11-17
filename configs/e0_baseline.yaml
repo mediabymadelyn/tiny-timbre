@@ -22,5 +22,5 @@ scores_path: data/results/e0_baseline_test_scores.npz
 
 # Weights & Biases, same project as the CNN runs
 wandb_project: tiny-timbre
-wandb_entity: null        # set to the shared W&B team name so everyone sees the run
+wandb_entity: tiny-timbre-team       # set to the shared W&B team name so everyone sees the run
 wandb_mode: offline       # saved under wandb/; upload later with `uv run wandb sync wandb/offline-run-*`
