@@ -28,10 +28,52 @@ uv run pytest -q        # all tests use small fake data; no dataset needed
    The team copy lives on Drive at `dl-final/data/mels_medium`. Colab runner:
    `notebooks/spectrograms.ipynb`.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    A["MP3, 30 s"] -->|"librosa: 22,050 Hz mono"| B["log-mel spectrogram<br/>128 × 1292, dB"]
+    B -->|"random 10 s crop (train)<br/>full 30 s (val/test)"| C["1 × 128 × T"]
+    subgraph Encoder["CNN encoder (388,800 params)"]
+        direction LR
+        E1["Conv 3×3 → BN → ReLU → MaxPool<br/>×4: 32, 64, 128, 256 channels"] --> E2["global average pool"]
+    end
+    C --> E1
+    E2 --> X["audio vector x<br/>256"]
+    X --> F["Flat head<br/>Linear 256 → 97"]
+    X --> G["GCN head<br/>H = ReLU(Â H W), z = H x"]
+    T["genre tree<br/>(genres.csv) → Â"] --> G
+    F --> Z["97 logits → sigmoid → BCE"]
+    G --> Z
+    X -.-> R["nearest neighbours<br/>(recommendations, E4)"]
+```
+
 ## Reproducing results
 
-_TODO: one command per experiment (E0–E4), and where each figure/table in the report comes from._
-_TODO: peak GPU memory and the machine the reported results were run on._
+Three commands, once the data is in `data/` (see Data above):
+
+```bash
+uv sync
+uv run python -m tiny_timbre.baseline --config configs/e0_baseline.yaml     # E0 logistic regression (CPU)
+uv run python -m tiny_timbre.train --config configs/e1_gcn_s0.yaml          # any CNN run (GPU)
+```
+
+Each training run logs loss, validation macro mAP and per-layer gradient norms to Weights & Biases
+every epoch, keeps the epoch with the best validation score, then scores the test split and saves
+`data/results/<name>_test_scores.npz` and `<name>_embeddings.npz` (song vectors for E4). Interrupted
+runs resume from `checkpoints/<name>.pt`. On Colab, use `notebooks/train_colab.ipynb`.
+
+| Config | Experiment |
+|---|---|
+| `configs/sanity.yaml` | 1,000 clips, 3 epochs: check the loss goes down |
+| `configs/e0_baseline.yaml` | E0: logistic regression on `features.csv` |
+| `configs/e0_cnn_flat.yaml` | E0: CNN + flat head; also E1's flat run for seed 0 |
+| `configs/e1_flat_s1.yaml`, `e1_flat_s2.yaml` | E1: flat head, seeds 1 and 2 |
+| `configs/e1_gcn_s0.yaml`, `e1_gcn_s1.yaml`, `e1_gcn_s2.yaml` | E1: GCN head over the genre tree, seeds 0–2 |
+| `configs/e2_gcn_cooc_s0.yaml` | E2: tree + co-occurrence edges (compare with `e1_gcn_s0`) |
+| `configs/e3_gcn_1layer_s0.yaml`, `e3_gcn_3layer_s0.yaml` | E3: GCN depth 1 and 3 (2 layers is `e1_gcn_s0`) |
+
+_TODO: results table, links to the W&B runs, peak GPU memory and the machine the reported results were run on._
 
 ## Repository layout
 
@@ -51,7 +93,7 @@ tiny-timbre/
 │   ├── graph.py          # adjacency A from genres.csv, co-occurrence, normalized Â      [Miranda]
 │   ├── gcn.py            # from-scratch GCN layer + GCN head; flat head                  [Ayesha]
 │   ├── model.py          # encoder + head wired together                                 [Maddi]
-│   ├── train.py          # training loop, BCE, W&B logging, gradient hooks               [Maddi]
+│   ├── train.py          # training loop, W&B logging, best epoch, test scoring          [Maddi]
 │   ├── evaluate.py       # macro mAP, per-level mAP, hierarchy violations, audit list    [Miranda]
 │   └── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [Miranda]
 ├── tests/
@@ -61,7 +103,7 @@ tiny-timbre/
 │   ├── test_labels.py    # parents included, no tags in the inputs                       [Miranda]
 │   ├── test_encoder.py   # output shape, parameter count ≈ 0.39M                         [Maddi]
 │   └── test_recommend.py # neighbours and overlap@k on fake embeddings                   [Miranda]
-├── notebooks/            # Colab runners + figures; import from src/, no logic here
+├── notebooks/            # Colab runners (train_colab, spectrograms) + figures; no logic here
 ├── data/                 # gitignored: raw MP3s, cached mels, checkpoints
 └── report/               # report + figures
 ```
