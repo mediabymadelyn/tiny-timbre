@@ -1,0 +1,24 @@
+# Sanity check: 1,000 training clips, 3 epochs. The loss should go down.
+# Run: uv run python -m tiny_timbre.train --config configs/sanity.yaml
+
+name: sanity
+head: flat
+seed: 0
+
+# Same settings as the real runs, except fewer clips and epochs
+max_train_clips: 1000
+lr: 0.001
+epochs: 3
+batch_size: 32
+crop_frames: 431          # 10 s random crops for training; validation and test use full 30 s clips
+num_workers: 2
+
+# Paths are relative to the repo root, so the same config runs on a laptop, a lab machine or Colab.
+# notebooks/train_colab.ipynb copies the data into data/ and links checkpoints/ to Drive.
+mels_dir: data/mels_medium
+metadata_dir: data/fma_metadata
+checkpoint_path: checkpoints/sanity.pt
+results_dir: data/results
+
+wandb_project: tiny-timbre
+wandb_entity: null        # set to the shared W&B team name so everyone sees every run
