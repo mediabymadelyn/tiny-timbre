@@ -75,12 +75,40 @@ runs resume from `checkpoints/<name>.pt`. On Colab, use `notebooks/train_colab.i
 
 _TODO: results table, links to the W&B runs, peak GPU memory and the machine the reported results were run on._
 
+## Recommendation demo
+
+A local web page for trying the recommendation prototype (E4) by ear: pick a test song, listen
+to it, and compare its 10 nearest songs under the GCN model's embeddings, the flat model's
+embeddings and `features.csv`, side by side. It uses the same search and score as E4
+(`recommend.py`), and also shows genre overlap@10 over the whole test split.
+
+```bash
+# needs data/results/e1_gcn_s0_embeddings.npz and/or e0_cnn_flat_embeddings.npz (from Drive's results/)
+uv run --group demo python -m tiny_timbre.demo              # opens in the browser
+uv run --group demo python -m tiny_timbre.demo --prefetch   # first cache the clips for the ★ demo songs
+```
+
+Clips play from `data/fma_medium/` if present; otherwise each one (~1 MB) is fetched on demand
+from the public `fma_medium.zip` and cached in `data/demo_audio/`. After `--prefetch`, the ★ songs
+(one per top-level genre) work offline. `--share` gives a temporary public link.
+
+**Built by Claude Code (AI)** at the team's request, as a presentation aid. It is not part of
+the graded method; see AI usage below.
+
+## AI usage
+
+| What | Tool | How it was used |
+|---|---|---|
+| `src/tiny_timbre/demo.py`, `tests/test_demo.py` (recommendation demo) | Claude Code | written entirely by the AI at Maddi's request; uses Miranda's `recommend.py` for the search and score |
+
+_TODO: the rest of the AI usage log (every member); conversation exports in `transcripts/`._
+
 ## Repository layout
 
 ```
 tiny-timbre/
-├── pyproject.toml        # uv project; deps: torch, librosa, soundfile, pandas, scikit-learn, wandb, pyyaml, tqdm
-│                         # dev deps: pytest, ipykernel, torch_geometric (only for checking our GCN)
+├── pyproject.toml        # uv project; deps: torch, librosa, soundfile, pandas, scikit-learn, wandb, pyyaml, tqdm, matplotlib
+│                         # dev deps: pytest, ipykernel, torch_geometric (only for checking our GCN); demo group: gradio
 ├── uv.lock
 ├── README.md             # how to get the data + reproduce every result
 ├── HYPOTHESES.md         # predictions, committed before each experiment runs
@@ -95,7 +123,9 @@ tiny-timbre/
 │   ├── model.py          # encoder + head wired together                                 [Maddi]
 │   ├── train.py          # training loop, W&B logging, best epoch, test scoring          [Maddi]
 │   ├── evaluate.py       # macro mAP, per-level mAP, hierarchy violations, audit list    [Miranda]
-│   └── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [Miranda]
+│   ├── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [Miranda]
+│   ├── analyze.py        # result tables, seed averages, over-smoothing, audit, figures  [Maddi]
+│   └── demo.py           # web page for trying the recommendations by ear      [Claude Code, AI]
 ├── tests/
 │   ├── test_data.py      # log-mel shapes, padding, resume, failed clips                 [Maddi]
 │   ├── test_gcn.py       # matches PyG GCNConv, gradcheck                                [Ayesha]
