@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 import zipfile
 
 import numpy as np
@@ -117,3 +118,19 @@ def test_build_app_on_fake_data():
     data = DemoData(_recommender(), info, [1, 2, 3], {1: "Rock", 2: "Punk", 3: "Jazz"})
     assert data.demo_picks() == [10, 11]  # one per top-level genre
     build_app(data, AudioSource("missing", "missing", zip_url=None), k=2)
+
+
+LOCAL_MELS = Path("data/mels_medium")
+
+
+@pytest.mark.skipif(not (LOCAL_MELS / "logmel_f16.npy").exists(), reason="needs local mels")
+def test_spectrogram_from_audio_matches_cache():
+    from tiny_timbre.data import load_logmel_cache
+
+    mels, index = load_logmel_cache(LOCAL_MELS)
+    first = index[index["status"] == "ok"].iloc[0]
+    tid, row = int(first["track_id"]), int(first["row"])
+    cached = DemoData(None, None, [], {}, mels=mels, mel_row={tid: row}).spectrogram(tid)
+    from_mp3 = DemoData(None, None, [], {}).spectrogram(tid, audio_path=first["path"])
+    assert from_mp3.shape == cached.shape
+    assert np.abs(from_mp3.astype(int) - cached.astype(int)).mean() < 1  # same image, up to float16

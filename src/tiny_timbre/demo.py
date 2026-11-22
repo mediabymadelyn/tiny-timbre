@@ -33,7 +33,7 @@ import numpy as np
 import pandas as pd
 
 from tiny_timbre.baseline import load_features, load_label_splits
-from tiny_timbre.data import load_logmel_cache
+from tiny_timbre.data import compute_logmel, load_audio, load_logmel_cache
 from tiny_timbre.evaluate import genre_groups
 from tiny_timbre.labels import load_genres, load_tracks
 from tiny_timbre.recommend import (genre_overlap_per_query, overlap_report, query_masks,
@@ -263,9 +263,19 @@ class DemoData:
         top = r["genre_top"] if isinstance(r["genre_top"], str) else "no top genre"
         return f"{r['title']} — {r['artist']} ({top})"
 
-    def spectrogram(self, track_id: int):
+    def spectrogram(self, track_id: int, audio_path: str | None = None):
+        """From the cached log-mels if this track is in them; otherwise computed from its MP3
+        with data.py's own load_audio + compute_logmel (same settings as the cache)."""
         row = self.mel_row.get(int(track_id))
-        return None if row is None else spectrogram_image(self.mels[row])
+        if row is not None:
+            return spectrogram_image(self.mels[row])
+        if audio_path is None:
+            return None
+        try:
+            return spectrogram_image(compute_logmel(load_audio(audio_path)))
+        except Exception as e:  # an undecodable clip shouldn't break the page
+            print(f"could not compute a spectrogram for track {track_id}: {e}")
+            return None
 
     def demo_picks(self) -> list[int]:
         """One test song per top-level genre (the lowest track id), for a quick tour."""
@@ -376,7 +386,8 @@ def build_app(data: DemoData, audio: AudioSource, k: int = 10):
         track_id = int(track_id)
         genres = data.genres(data.rec.Y_query[data.rec._query_row[track_id]])
         info = f"## {data.label(track_id)}\n**Genres:** {', '.join(genres) or 'none'}"
-        outputs, shown = [info, audio.path(track_id), data.spectrogram(track_id)], {}
+        clip = audio.path(track_id)
+        outputs, shown = [info, clip, data.spectrogram(track_id, clip)], {}
         for m in methods:
             heading, rows, ids = recommendation_rows(data, m, track_id, k)
             outputs += [heading, rows]
@@ -390,8 +401,9 @@ def build_app(data: DemoData, audio: AudioSource, k: int = 10):
             if row is None or row >= len(ids):
                 return gr.skip(), gr.skip(), gr.skip()
             tid = ids[row]
+            clip = audio.path(tid)
             return (f"**Now playing ({METHOD_NAMES[method]} #{row + 1}):** {data.label(tid)}",
-                    audio.path(tid), data.spectrogram(tid))
+                    clip, data.spectrogram(tid, clip))
         return handler
 
     with gr.Blocks(title="tiny-timbre recommendations") as app:
