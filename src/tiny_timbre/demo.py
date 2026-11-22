@@ -254,6 +254,36 @@ class DemoData:
     genre_names: dict
     mels: np.ndarray | None = None
     mel_row: dict = field(default_factory=dict)  # track_id -> row of mels
+    parents: dict = field(default_factory=dict)  # genre_id -> parent id (0 = top-level)
+
+    def genre_path(self, genre_id: int) -> str:
+        """e.g. 'Rock › Punk': the genre with its ancestors, top-level first."""
+        name = self.genre_names.get(genre_id, str(genre_id))
+        parent = self.parents.get(genre_id, 0)
+        return name if not parent else f"{self.genre_path(parent)} › {name}"
+
+    def genre_choices(self) -> list[tuple[str, int]]:
+        """Filter options: 'All genres', then every genre some test song has, grouped under its
+        top-level genre, with how many test songs carry it. Values are genre ids (0 = all)."""
+        counts = self.rec.Y_query.sum(axis=0)
+        entries = sorted((self.genre_path(g), g, int(n))
+                         for g, n in zip(self.genre_ids, counts) if n > 0)
+        return [("All genres", 0)] + [(f"{path} ({n})", g) for path, g, n in entries]
+
+    def song_choices(self, genre_id: int | None = None) -> list[tuple[str, int]]:
+        """Song picker entries (label, track_id): ★ demo picks first, then A-Z.
+
+        genre_id: only test songs tagged with that genre (parents count, so 'Rock' includes
+        its subgenres' songs); None or 0 = every test song.
+        """
+        ids = [int(t) for t in self.rec.query_ids]
+        if genre_id:
+            column = self.rec.Y_query[:, self.genre_ids.index(genre_id)]
+            ids = [t for t, tagged in zip(ids, column) if tagged]
+        picks = set(self.demo_picks())
+        starred = sorted((t for t in ids if t in picks), key=self.label)
+        rest = sorted((t for t in ids if t not in picks), key=self.label)
+        return [(f"★ {self.label(t)}", t) for t in starred] + [(self.label(t), t) for t in rest]
 
     def genres(self, Y_row: np.ndarray) -> list[str]:
         return [self.genre_names.get(g, str(g)) for g, on in zip(self.genre_ids, Y_row) if on]
@@ -330,7 +360,7 @@ def load_demo(results_dir, metadata_dir, mels_dir=None, gcn_run="e1_gcn_s0",
                          "genre_top": tracks[("track", "genre_top")]})
     genre_names = load_genres(metadata_dir / "genres.csv")["title"].to_dict()
 
-    data = DemoData(rec, info, genre_ids, genre_names)
+    data = DemoData(rec, info, genre_ids, genre_names, parents=parents)
     if mels_dir is not None and (Path(mels_dir) / "logmel_f16.npy").exists():
         data.mels, index = load_logmel_cache(mels_dir)
         ok_rows = index[index["status"] == "ok"]
@@ -370,15 +400,29 @@ The score is genre overlap: 1 = exactly the same genres, 0 = none in common.
 Click any recommendation to hear it."""
 
 
+PINK = {"light": "#f9a8d4", "dark": "#db2777"}  # Tailwind pink-300 / pink-600
+
+
+def pink_theme():
+    """Gradio theme with pink buttons, sliders, links and focus accents."""
+    import gradio as gr
+
+    return gr.themes.Soft(primary_hue="pink", secondary_hue="pink", neutral_hue="slate")
+
+
+def _song_label(n: int) -> str:
+    return f"Test song: {n} to choose from (★ = one per top-level genre)"
+
+
 def build_app(data: DemoData, audio: AudioSource, k: int = 10):
+    """The page. Launch with build_app(...).launch(theme=pink_theme())."""
     import gradio as gr
 
     methods = data.rec.methods
-    picks = [t for t in data.demo_picks()]
-    others = [int(t) for t in data.rec.query_ids if int(t) not in set(picks)]
-    choices = ([(f"★ {data.label(t)}", t) for t in picks]
-               + [(data.label(t), t) for t in sorted(others, key=data.label)])
     overall = data.rec.overall(k).round(3).reset_index(names="method")
+    waveform = gr.WaveformOptions(waveform_color=PINK["light"],
+                                  waveform_progress_color=PINK["dark"])
+    all_songs = data.song_choices()
 
     def show_query(track_id):
         if track_id is None:
@@ -412,12 +456,15 @@ def build_app(data: DemoData, audio: AudioSource, k: int = 10):
                           f"overlap@{k} per method (higher is better)", open=False):
             gr.Dataframe(value=overall, interactive=False)
         with gr.Row():
-            pick = gr.Dropdown(choices=choices, value=None, filterable=True, scale=5,
-                               label="Test song (★ = one per top-level genre)")
-            shuffle = gr.Button("Random song", scale=1)
+            genre = gr.Dropdown(choices=data.genre_choices(), value=0, filterable=True, scale=2,
+                                label="Filter by genre (number of test songs)")
+            pick = gr.Dropdown(choices=all_songs, value=None, filterable=True, scale=4,
+                               label=_song_label(len(all_songs)))
+            shuffle = gr.Button("Random song", variant="primary", scale=1)
         query_info = gr.Markdown()
         with gr.Row():
-            query_audio = gr.Audio(type="filepath", label="Listen", interactive=False)
+            query_audio = gr.Audio(type="filepath", label="Listen", interactive=False,
+                                   waveform_options=waveform)
             query_spec = gr.Image(label="Log-mel spectrogram (what the CNN sees; time →, pitch ↑)",
                                   interactive=False)
         shown = gr.State({})
@@ -432,15 +479,26 @@ def build_app(data: DemoData, audio: AudioSource, k: int = 10):
                         interactive=False, wrap=True)
         now_info = gr.Markdown("_Click a recommendation to hear it._")
         with gr.Row():
-            now_audio = gr.Audio(type="filepath", label="Recommendation", interactive=False)
+            now_audio = gr.Audio(type="filepath", label="Recommendation", interactive=False,
+                                 waveform_options=waveform)
             now_spec = gr.Image(label="Its spectrogram", interactive=False)
 
         outputs = [query_info, query_audio, query_spec]
         for m in methods:
             outputs += [headings[m], tables[m]]
         pick.change(show_query, inputs=pick, outputs=outputs + [shown])
+
+        def filter_songs(genre_id):
+            songs = data.song_choices(genre_id)
+            return gr.Dropdown(choices=songs, value=None, label=_song_label(len(songs)))
+
         rng = np.random.default_rng()
-        shuffle.click(lambda: int(rng.choice(data.rec.query_ids)), outputs=pick)
+
+        def random_song(genre_id):  # a random song within the current genre filter
+            return int(rng.choice([t for _, t in data.song_choices(genre_id)]))
+
+        genre.change(filter_songs, inputs=genre, outputs=pick)
+        shuffle.click(random_song, inputs=genre, outputs=pick)
         for m in methods:
             tables[m].select(play(m), inputs=shown, outputs=[now_info, now_audio, now_spec])
     return app
@@ -488,7 +546,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.prefetch:
         prefetch(data, audio, args.k)
     build_app(data, audio, args.k).launch(
-        share=args.share, server_port=args.port, inbrowser=True,
+        theme=pink_theme(), share=args.share, server_port=args.port, inbrowser=True,
         allowed_paths=[str(Path(args.audio_dir).resolve()), str(Path(args.cache_dir).resolve())])
 
 

@@ -134,3 +134,24 @@ def test_spectrogram_from_audio_matches_cache():
     from_mp3 = DemoData(None, None, [], {}).spectrogram(tid, audio_path=first["path"])
     assert from_mp3.shape == cached.shape
     assert np.abs(from_mp3.astype(int) - cached.astype(int)).mean() < 1  # same image, up to float16
+
+
+def _filter_data():
+    info = pd.DataFrame({"title": ["zebra", "apple", "a", "b", "c", "d"], "artist": ["x"] * 6,
+                         "genre_top": ["Rock", "Jazz", "Rock", "Rock", "Jazz", "Jazz"]},
+                        index=[10, 11, 20, 21, 22, 23])
+    return DemoData(_recommender(), info, [1, 2, 3], {1: "Rock", 2: "Punk", 3: "Jazz"},
+                    parents={1: 0, 2: 1, 3: 0})
+
+
+def test_genre_choices_grouped_under_top_level_with_counts():
+    assert _filter_data().genre_choices() == [
+        ("All genres", 0), ("Jazz (1)", 3), ("Rock (1)", 1), ("Rock › Punk (1)", 2)]
+
+
+def test_song_choices_filter_by_genre():
+    data = _filter_data()
+    assert [t for _, t in data.song_choices()] == [11, 10]  # both ★, A-Z: apple, zebra
+    assert data.song_choices()[0][0].startswith("★ apple")
+    assert [t for _, t in data.song_choices(2)] == [10]  # only the Punk-tagged query
+    assert [t for _, t in data.song_choices(3)] == [11]
