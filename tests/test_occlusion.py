@@ -13,8 +13,8 @@ from torch import nn
 
 from tiny_timbre.gcn import FlatHead
 from tiny_timbre.model import Model
-from tiny_timbre.occlusion import (SILENCE, occlude, occlusion_scores, occlusion_summary,
-                                   plot_occlusion, run_occlusion, sample_by_genre, segment_labels,
+from tiny_timbre.occlusion import (SILENCE, mean_confidence, occlude, occlusion_scores,
+                                   occlusion_summary, plot_occlusion, run_occlusion, sample_by_genre, segment_labels,
                                    segments)
 
 LOCAL_MELS = Path("data/mels_medium")
@@ -77,23 +77,30 @@ def test_sample_by_genre_caps_each_genre():
     assert pd.Series(top[picked]).value_counts().to_dict() == {"Rock": 4, "Jazz": 4, "Folk": 3}
 
 
-def test_occlusion_summary_is_the_share_of_confidence_lost():
+def test_occlusion_summary_drop_in_points_and_share():
     df = pd.DataFrame({
         "track_id": [1, 1, 2, 2, 3, 3],
         "genre": ["Rock", "Rock", "Rock", "Rock", "Folk", "Folk"],
         "segment": [0, 1, 0, 1, 0, 1],
         "label": ["low", "high"] * 3,
-        "p_full": [0.8, 0.8, 0.4, 0.4, 0.5, 0.5],
-        "p_masked": [0.4, 0.8, 0.2, 0.6, 0.5, 0.25],
+        "p_full": [0.8, 0.8, 0.4, 0.4, 0.02, 0.02],
+        "p_masked": [0.4, 0.8, 0.2, 0.6, 0.0, 0.01],
     })
-    s = occlusion_summary(df)
-    assert list(s.columns) == ["low", "high"]
-    assert s.loc["Rock", "low"] == pytest.approx(0.5)     # 1 - 0.3 / 0.6
-    assert s.loc["Rock", "high"] == pytest.approx(-1 / 6)  # 1 - 0.7 / 0.6: blanking HELPED
-    assert s.loc["Folk", "high"] == pytest.approx(0.5)
+    points = occlusion_summary(df)
+    assert list(points.columns) == ["low", "high"]
+    assert points.loc["Rock", "low"] == pytest.approx(0.3)    # 0.6 - 0.3
+    assert points.loc["Rock", "high"] == pytest.approx(-0.1)  # 0.6 - 0.7: blanking HELPED
+    assert points.loc["Folk", "low"] == pytest.approx(0.02)   # tiny confidence -> tiny drop
+    share = occlusion_summary(df, relative=True)
+    assert share.loc["Rock", "low"] == pytest.approx(0.5)     # 1 - 0.3 / 0.6
+    assert share.loc["Folk", "low"] == pytest.approx(1.0)     # looks dramatic, means little
 
-    fig = plot_occlusion({"flat head": s, "GCN head": s})
+    conf = mean_confidence(df)
+    assert conf.to_dict() == pytest.approx({"Rock": 0.6, "Folk": 0.02})
+    fig = plot_occlusion({"flat head": points, "GCN head": points},
+                         {"flat head": conf, "GCN head": conf})
     assert len(fig.axes) == 3  # two heat maps + the color bar
+    assert fig.axes[0].get_yticklabels()[0].get_text().startswith("Rock")  # most confident first
 
 
 @pytest.mark.skipif(not (LOCAL_MELS / "logmel_f16.npy").exists() or not (LOCAL_META / "genres.csv").exists(),

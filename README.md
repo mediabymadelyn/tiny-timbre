@@ -46,7 +46,12 @@ flowchart LR
     F --> Z["97 logits → sigmoid → BCE"]
     G --> Z
     X -.-> R["nearest neighbours<br/>(recommendations, E4)"]
+    X -.-> P["linear probe → features.csv<br/>(what the vector holds)"]
+    B -.->|"blank one stripe"| O["occlusion: drop in<br/>true-genre confidence"]
 ```
+
+Dotted arrows are uses of a trained model (no training): recommendations, and the two
+interpretability checks below.
 
 ## Reproducing results
 
@@ -75,6 +80,49 @@ runs resume from `checkpoints/<name>.pt`. On Colab, use `notebooks/train_colab.i
 
 _TODO: results table, links to the W&B runs, peak GPU memory and the machine the reported results were run on._
 
+## Interpretability (exploratory)
+
+Two checks on the trained seed-0 models (`e0_cnn_flat`, `e1_gcn_s0`), suggested in class after
+E0–E4 were finished. No new training, and no predictions were committed for them, so they are
+exploratory.
+
+```bash
+# linear probe (laptop, ~1 min): the "linear probe" cell of notebooks/figures.ipynb
+# occlusion (needs the full spectrograms, so Colab: notebooks/occlusion_colab.ipynb runs these)
+uv run python -m tiny_timbre.occlusion --config configs/e0_cnn_flat.yaml configs/e1_gcn_s0.yaml --axis frequency
+uv run python -m tiny_timbre.occlusion --config configs/e0_cnn_flat.yaml configs/e1_gcn_s0.yaml --axis time
+```
+
+**Linear probe** (`probe.py`): a ridge regression from the 256-number song vector to each
+`features.csv` measurement family (per-clip mean), fit on training songs, R² on test songs.
+Random vectors score about 0.
+
+| Family | Flat | GCN |
+|---|---|---|
+| timbre (MFCC, spectral centroid / bandwidth / contrast / rolloff) | 0.56–0.70 | 0.57–0.70 |
+| noisiness (zero-crossing rate) | 0.55 | 0.55 |
+| loudness (RMS) | 0.33 | 0.34 |
+| harmony (chroma ×3, tonnetz) | 0.15–0.48 | 0.11–0.46 |
+
+The song vector keeps timbre much better than harmony. Loudness is low partly by design: each
+spectrogram is scaled to its own loudest point. Figure: `report/figures/probe_r2.png`.
+
+**Occlusion** (`occlusion.py`): for 30 test songs per top-level genre, one stripe of the
+spectrogram is set to silence and we record the drop in the model's confidence in the song's true
+top-level genre, in percentage points.
+
+- Frequency (8 bands): Rock relies on every band up to ~7 kHz (~70 points each, flat model);
+  Hip-Hop most on 419–812 Hz (65, vs. 22 for 0–393 Hz); Classical on the lowest bands;
+  Old-Time / Historic on the middle bands but not the top two. No single band matters for
+  Electronic, and blanking makes Experimental *more* likely. The top band (7.4–11 kHz) matters
+  least. Figure: `report/figures/occlusion_frequency.png`.
+- Time (six 5 s pieces): blanking any 5 s costs only a few points, about equally anywhere in the
+  clip, so the model uses the whole clip. Figure: `report/figures/occlusion_time.png`.
+- Limits: one seed; few test songs for Blues (8), Spoken (12) and Country (18); genres the model
+  barely recognises (Blues, Country, Soul-RnB: 1–2% confidence) can't show a drop; a silent stripe
+  is an unnatural input; the middle bands hold both vocals and instruments, so this can't tell
+  whether the model uses the voice.
+
 ## Recommendation demo
 
 A local web page for trying the recommendation prototype (E4) by ear: pick a test song, listen
@@ -100,9 +148,9 @@ the graded method; see AI usage below.
 | What | Tool | How it was used |
 |---|---|---|
 | `src/tiny_timbre/demo.py`, `tests/test_demo.py` (recommendation demo) | Claude Code | written entirely by the AI at Maddi's request; uses Miranda's `recommend.py` for the search and score |
-| `src/tiny_timbre/probe.py`, `occlusion.py`, their tests, `notebooks/occlusion_colab.ipynb` (interpretability checks suggested in class) | Claude Code | suggested in class; the AI proposed the method details and wrote the code at Maddi's request; the predictions are the team's |
+| `src/tiny_timbre/probe.py`, `occlusion.py`, their tests, `notebooks/occlusion_colab.ipynb` (interpretability checks suggested in class) | Claude Code | suggested in class; the AI proposed the method details, wrote the code and drafted the README summary at Maddi's request |
 
-_TODO: the rest of the AI usage log (every member); conversation exports in `transcripts/`._
+_TODO: the rest of the AI usage log (every member)._
 
 ## Repository layout
 
@@ -135,8 +183,10 @@ tiny-timbre/
 │   ├── test_graph.py     # Â symmetric, eigenvalues in [-1, 1], every genre has a parent  [Miranda]
 │   ├── test_labels.py    # parents included, no tags in the inputs                       [Miranda]
 │   ├── test_encoder.py   # output shape, parameter count ≈ 0.39M                         [Maddi]
-│   └── test_recommend.py # neighbours and overlap@k on fake embeddings                   [Miranda]
-├── notebooks/            # Colab runners (train_colab, spectrograms) + figures; no logic here
+│   ├── test_recommend.py # neighbours and overlap@k on fake embeddings                   [Miranda]
+│   ├── test_probe.py     # probe reads linear features, not noise                  [Maddi, with AI]
+│   └── test_occlusion.py # only the blanked stripe changes; summary maths          [Maddi, with AI]
+├── notebooks/            # Colab runners (train_colab, spectrograms, occlusion_colab) + figures; no logic here
 ├── data/                 # gitignored: raw MP3s, cached mels, checkpoints
-└── report/               # report + figures
+└── report/               # report; figures/ and tables/ are made by notebooks/figures.ipynb
 ```

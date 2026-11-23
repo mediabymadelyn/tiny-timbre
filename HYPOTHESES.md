@@ -277,50 +277,11 @@ random, in every group; flat vs. GCN differs by about 1 point. _To confirm: Mira
     beats and nearly blank on Rock.
 - **Verdict (Maddi):**  vertical stripes for hiip hop drums and messy frequency patterns for rock match what i expected. Classical music didnt show horizontal held-note lines but this clip is solo piano , so notes fade instead of sustaining, so it shows seperate notes instead. One clip per genre is a small sample and I didnt check electronic. (mixed)
 
-### Interpretability (added Nov 23, 2026)
+### Interpretability (exploratory, added Nov 23, 2026)
 
-Suggested in class on Nov 23, **after** the E0–E4 results were known, so these predictions are
-not blind to those results. Still write and commit them before running `probe.py` or
-`occlusion.py`. Both checks use the seed-0 models (`e0_cnn_flat`, `e1_gcn_s0`); no new training.
-
-#### Linear probe: what is in the 256-number song vector?
-
-For each family of hand-made measurements in features.csv (its per-clip average), fit a linear
-regression from the song vector on the training songs and report R² on the test songs
-(1 = fully readable, 0 = no better than guessing the average). Random vectors are the reference.
-Families: timbre (MFCC, spectral centroid / bandwidth / contrast / rolloff), harmony (chroma ×3,
-tonnetz), loudness (RMS), noisiness (zero-crossing rate).
-
-Good to know: every spectrogram is scaled so its loudest point is 0 dB (`data.compute_logmel`),
-and both models were trained only to predict genres.
-
-<!-- Say which families will be most and least readable, and whether flat and GCN will differ. -->
-- **Prediction (Maddi):**
-- **Prediction (Miranda):**
-- **Prediction (Ayesha):**
-- **Result:** _pending (`report/tables/probe_r2.csv`, `report/figures/probe_r2.png`)_
-- **Verdicts:**
-  - **Maddi:**
-  - **Miranda:**
-  - **Ayesha:**
-
-#### Occlusion: which part of the spectrogram does the model rely on?
-
-For 30 test songs per top-level genre, blank out one stripe of the spectrogram at a time (8
-frequency bands, low to high pitch; or six 5 s pieces of the clip) and measure the share of the
-model's confidence in the song's true top-level genre that disappears. The model sees no words,
-only how loud each frequency band is over time; singing is mostly in the middle bands.
-
-<!-- Say which bands matter most for which genres (e.g. Hip-Hop, Classical, Rock, Electronic),
-     whether any genre leans on one band, and whether the time pieces matter equally. -->
-- **Prediction (Maddi):**
-- **Prediction (Miranda):**
-- **Prediction (Ayesha):**
-- **Result:** _pending (`notebooks/occlusion_colab.ipynb`, then `report/figures/occlusion_*.png`)_
-- **Verdicts:**
-  - **Maddi:**
-  - **Miranda:**
-  - **Ayesha:**
+The linear probe and occlusion were suggested in class after E0–E4 were finished and were run
+without predictions, so they are exploratory, not tested hypotheses. Method, results and limits
+are in the README (Interpretability) and the report.
 
 ### Metadata audit: 30 most confident model–tag disagreements
 
