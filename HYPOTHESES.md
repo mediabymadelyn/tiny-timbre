@@ -57,7 +57,7 @@ validation, 15 failed clips dropped; 19,909 train / 2,572 test. The CNN is bette
 
 <!-- Miranda / Ayesha: right direction (CNN wins), but by 4.3 points, not 5+. Maddi: predicted the opposite. -->
 - **Miranda:** Mixed. The CNN beat logistic regression, as I predicted, but by 4.3 points, not 5+.
-- **Maddi:** I originally predicted that the logistic regression would win by 5 points, but the cnn actually won by 4.3 points and was better on pretty much every metric. Learning features from the spectrograms worked a lot better than I expected with 20k music snippets.
+- **Maddi:** I originally predicted that the logistic regression would win by 5 points, but the cnn actually won by 4.3 points and was better on pretty much every metric. Learning features from the spectrograms worked a lot better than I expected with 20k music snippets. (not supported)
 - **Ayesha:**
 
 ---
@@ -113,7 +113,7 @@ for flat), so it struggles to tell subgenres apart.
      Maddi: right direction on rare (−2.5, not −6) and overall (slightly lower); common differs by 1.3 (not within 1); violations equal, not lower.
      Ayesha's violation part: equal, not lower for flat. -->
 - **Miranda:** I predicted a 2-4 point GCN gain on rare genres; it lost about 2 overall and most on rare genres. Top-level genres barely changed, as I predicted.
-- **Maddi:** I was right that the GCN would do worse on rare genres (-2.5 points though, not 6) and slightly worse overall (-2.0). E3;s over smoothing result backs up my original hypothesis about bluring genres, but I was still wrong about the common genres, which differd by 1.3 points, not within 1, and hierarchy violations were the same for both the CNN and GCN. 
+- **Maddi:** I was right that the GCN would do worse on rare genres (-2.5 points though, not 6) and slightly worse overall (-2.0). E3;s over smoothing result backs up my original hypothesis about bluring genres, but I was still wrong about the common genres, which differd by 1.3 points, not within 1, and hierarchy violations were the same for both the CNN and GCN. (mixed)
 - **Ayesha:**
 
 ---
@@ -151,7 +151,7 @@ seed-to-seed spread in E1). Both GCNs stay about 2 points below the flat head.
 ### Verdicts
 
 <!-- Maddi: predicted −2 to −3 points; actual change 0. -->
-- **Maddi:** I predicted co-occurance edges woiuld lower macro mAP by 2-3 points but there was no hange. The tree-only GCN already made sibling detectors similar (cosine 0.82), so the extra edges had little left to blur. 
+- **Maddi:** I predicted co-occurance edges woiuld lower macro mAP by 2-3 points but there was no hange. The tree-only GCN already made sibling detectors similar (cosine 0.82), so the extra edges had little left to blur.  (not supported)
 
 ---
 
@@ -189,7 +189,7 @@ below the flat head.
 ### Verdicts
 
 <!-- Maddi: 1 layer best, supported; siblings more similar with depth, supported (rises then plateaus); size: −0.8, not −4. -->
-- **Maddi:**   One layer did score best, and the genre siblings DID become more similar with depth (costine 0.67 -> 0.82 -> 0.81), but the drop at three layers was not as signifigant as I arbitrarily guessed because the smoothing leveled off after the second layer. 
+- **Maddi:**   One layer did score best, and the genre siblings DID become more similar with depth (costine 0.67 -> 0.82 -> 0.81), but the drop at three layers was not as signifigant as I arbitrarily guessed because the smoothing leveled off after the second layer. (mixed)
 
 ---
 
@@ -231,7 +231,7 @@ random, in every group; flat vs. GCN differs by about 1 point. _To confirm: Mira
      Maddi: flat > GCN > random right; features.csv was third, not first.
      Ayesha: flat and GCN swapped; rest right. -->
 - **Miranda:** GCN did not beat flat (about 1 point lower), but both beat features.csv and random, as I predicted.
-- **Maddi:** so the flat > GCN > random was rifht, and the fdlat vs GCN gap was the biggest for rare genres (1.0 pt vs 0.6 overall) as I had thought. but features csv came in third. the CNNS learned features beat the hand made ones. 
+- **Maddi:** so the flat > GCN > random was rifht, and the fdlat vs GCN gap was the biggest for rare genres (1.0 pt vs 0.6 overall) as I had thought. but features csv came in third. the CNNS learned features beat the hand made ones. (mixed)
 - **Ayesha:**
 
 ---
@@ -258,7 +258,7 @@ random, in every group; flat vs. GCN differs by about 1 point. _To confirm: Mira
   common genres) as under the flat head, and sibling genres receive almost the same update. Raw
   sizes are not compared across heads (different parameterizations). Limits: 199 clips; plain
   gradient direction, while training used Adam.
-- **Verdict (Maddi):** rare genres dectors got larger updates under the GCN bc the shared weights pass their relatives' signal to them, and those updates were less genre specific: siblings got basically the dsame update (blurring that I was reffering to before)
+- **Verdict (Maddi):** rare genres dectors got larger updates under the GCN bc the shared weights pass their relatives' signal to them, and those updates were less genre specific: siblings got basically the dsame update (blurring that I was reffering to before) (supported)
 
 ### Encoder feature maps (block 2) on clips from three genres
 
@@ -275,7 +275,52 @@ random, in every group; flat vs. GCN differs by about 1 point. _To confirm: Mira
     gaps, not long held lines.
   - The same channel responds very differently by genre: channel 35 is strong on the Hip-Hop
     beats and nearly blank on Rock.
-- **Verdict (Maddi):**  vertical stripes for hiip hop drums and messy frequency patterns for rock match what i expected. Classical music didnt show horizontal held-note lines but this clip is solo piano , so notes fade instead of sustaining, so it shows seperate notes instead. One clip per genre is a small sample and I didnt check electronic. 
+- **Verdict (Maddi):**  vertical stripes for hiip hop drums and messy frequency patterns for rock match what i expected. Classical music didnt show horizontal held-note lines but this clip is solo piano , so notes fade instead of sustaining, so it shows seperate notes instead. One clip per genre is a small sample and I didnt check electronic. (mixed)
+
+### Interpretability (added Nov 23, 2026)
+
+Suggested in class on Nov 23, **after** the E0–E4 results were known, so these predictions are
+not blind to those results. Still write and commit them before running `probe.py` or
+`occlusion.py`. Both checks use the seed-0 models (`e0_cnn_flat`, `e1_gcn_s0`); no new training.
+
+#### Linear probe: what is in the 256-number song vector?
+
+For each family of hand-made measurements in features.csv (its per-clip average), fit a linear
+regression from the song vector on the training songs and report R² on the test songs
+(1 = fully readable, 0 = no better than guessing the average). Random vectors are the reference.
+Families: timbre (MFCC, spectral centroid / bandwidth / contrast / rolloff), harmony (chroma ×3,
+tonnetz), loudness (RMS), noisiness (zero-crossing rate).
+
+Good to know: every spectrogram is scaled so its loudest point is 0 dB (`data.compute_logmel`),
+and both models were trained only to predict genres.
+
+<!-- Say which families will be most and least readable, and whether flat and GCN will differ. -->
+- **Prediction (Maddi):**
+- **Prediction (Miranda):**
+- **Prediction (Ayesha):**
+- **Result:** _pending (`report/tables/probe_r2.csv`, `report/figures/probe_r2.png`)_
+- **Verdicts:**
+  - **Maddi:**
+  - **Miranda:**
+  - **Ayesha:**
+
+#### Occlusion: which part of the spectrogram does the model rely on?
+
+For 30 test songs per top-level genre, blank out one stripe of the spectrogram at a time (8
+frequency bands, low to high pitch; or six 5 s pieces of the clip) and measure the share of the
+model's confidence in the song's true top-level genre that disappears. The model sees no words,
+only how loud each frequency band is over time; singing is mostly in the middle bands.
+
+<!-- Say which bands matter most for which genres (e.g. Hip-Hop, Classical, Rock, Electronic),
+     whether any genre leans on one band, and whether the time pieces matter equally. -->
+- **Prediction (Maddi):**
+- **Prediction (Miranda):**
+- **Prediction (Ayesha):**
+- **Result:** _pending (`notebooks/occlusion_colab.ipynb`, then `report/figures/occlusion_*.png`)_
+- **Verdicts:**
+  - **Maddi:**
+  - **Miranda:**
+  - **Ayesha:**
 
 ### Metadata audit: 30 most confident model–tag disagreements
 

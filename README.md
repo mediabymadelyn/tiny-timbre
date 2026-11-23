@@ -100,6 +100,7 @@ the graded method; see AI usage below.
 | What | Tool | How it was used |
 |---|---|---|
 | `src/tiny_timbre/demo.py`, `tests/test_demo.py` (recommendation demo) | Claude Code | written entirely by the AI at Maddi's request; uses Miranda's `recommend.py` for the search and score |
+| `src/tiny_timbre/probe.py`, `occlusion.py`, their tests, `notebooks/occlusion_colab.ipynb` (interpretability checks suggested in class) | Claude Code | suggested in class; the AI proposed the method details and wrote the code at Maddi's request; the predictions are the team's |
 
 _TODO: the rest of the AI usage log (every member); conversation exports in `transcripts/`._
 
@@ -125,6 +126,8 @@ tiny-timbre/
 │   ├── evaluate.py       # macro mAP, per-level mAP, hierarchy violations, audit list    [Miranda]
 │   ├── recommend.py      # nearest-neighbour recommendations + genre overlap@k           [Miranda]
 │   ├── analyze.py        # result tables, seed averages, over-smoothing, audit, figures  [Maddi]
+│   ├── probe.py          # linear probe: features.csv read back from song vectors  [Maddi, with AI]
+│   ├── occlusion.py      # blank spectrogram stripes, measure confidence lost      [Maddi, with AI]
 │   └── demo.py           # web page for trying the recommendations by ear      [Claude Code, AI]
 ├── tests/
 │   ├── test_data.py      # log-mel shapes, padding, resume, failed clips                 [Maddi]
