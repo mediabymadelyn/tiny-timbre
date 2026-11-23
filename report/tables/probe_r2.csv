@@ -1,0 +1,12 @@
+,group,flat head,GCN head,random vectors
+chroma_stft,harmony,0.4836,0.4642,-0.0078
+chroma_cqt,harmony,0.3584,0.2964,-0.0058
+chroma_cens,harmony,0.2203,0.1388,-0.0053
+tonnetz,harmony,0.1499,0.112,-0.0059
+rmse,loudness,0.3341,0.3393,-0.0084
+zcr,noisiness,0.5533,0.5537,-0.0082
+spectral_rolloff,timbre,0.7037,0.7009,-0.0058
+spectral_centroid,timbre,0.679,0.6716,-0.0052
+spectral_bandwidth,timbre,0.6786,0.6827,-0.0043
+spectral_contrast,timbre,0.6495,0.6567,-0.0088
+mfcc,timbre,0.564,0.5671,-0.0097

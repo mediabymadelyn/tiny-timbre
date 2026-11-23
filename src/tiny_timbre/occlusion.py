@@ -132,49 +132,66 @@ def run_occlusion(config: dict, axis: str = "frequency", n: int = 8, n_per_genre
     return pd.DataFrame(rows)
 
 
-def occlusion_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """Genre × stripe: share of the model's confidence that disappears when the stripe is blank.
+def occlusion_summary(df: pd.DataFrame, relative: bool = False) -> pd.DataFrame:
+    """Genre × stripe: how much the model's confidence in the true genre drops when the stripe
+    is blank.
 
-    1 - mean(p_masked) / mean(p_full), per genre and stripe (a ratio of means, so songs the
-    model was already unsure about can't blow it up). 0.4 = 40% of the confidence is gone;
-    negative = blanking that stripe made the model MORE sure.
+    Default: the drop in probability, mean(p_full) - mean(p_masked); 0.30 = 30 percentage points.
+    This keeps genres the model barely recognised (confidence ~1%) near 0, where they belong.
+    relative=True: the share of the confidence lost, 1 - mean(p_masked) / mean(p_full); this
+    looks dramatic for genres with tiny confidence, so it isn't used in the report.
+    Negative = blanking that stripe made the model MORE sure.
     """
     g = df.groupby(["genre", "segment"])
-    share = 1 - g["p_masked"].mean() / g["p_full"].mean()
-    table = share.unstack("segment")
+    full, masked = g["p_full"].mean(), g["p_masked"].mean()
+    table = (1 - masked / full if relative else full - masked).unstack("segment")
     names = df.drop_duplicates("segment").set_index("segment")["label"]
     table.columns = [names[k] for k in table.columns]
     table.index.name = None
     return table
 
 
+def mean_confidence(df: pd.DataFrame) -> pd.Series:
+    """Per genre: the model's average probability for the true genre on the untouched clips."""
+    return df.drop_duplicates("track_id").groupby("genre")["p_full"].mean()
+
+
 # neutral light gray at 0; magenta = confidence lost, teal = confidence gained
 _DROP_CMAP = LinearSegmentedColormap.from_list("drop", ["#1b7f79", "#f1f0ec", "#b8336a"])
 
 
-def plot_occlusion(summaries: dict[str, pd.DataFrame], xlabel: str = "blanked frequency band"):
-    """One heat map per model (genre × stripe), same color scale, values written in each cell."""
+def plot_occlusion(summaries: dict[str, pd.DataFrame], confidence: dict[str, pd.Series],
+                   xlabel: str = "blanked frequency band"):
+    """One heat map per model (genre × stripe): drop in confidence, in percentage points.
+
+    Rows are sorted by the first model's confidence (best-recognised genres on top), and each row
+    label shows that model's average confidence, since a drop can't exceed it.
+    """
+    first = next(iter(summaries))
+    order = confidence[first].sort_values(ascending=False).index
     vmax = max(float(np.nanmax(np.abs(s.to_numpy()))) for s in summaries.values())
     norm = TwoSlopeNorm(vcenter=0.0, vmin=-vmax, vmax=vmax)
-    first = next(iter(summaries.values()))
-    fig, axes = plt.subplots(1, len(summaries), sharey=True, squeeze=False,
-                             figsize=(0.75 * first.shape[1] * len(summaries) + 2.5,
-                                      0.32 * first.shape[0] + 1.8))
+    shape = summaries[first].shape
+    fig, axes = plt.subplots(1, len(summaries), squeeze=False, layout="constrained",  # no overlaps
+                             figsize=(0.75 * shape[1] * len(summaries) + 5, 0.32 * shape[0] + 1.9))
     for ax, (title, s) in zip(axes[0], summaries.items()):
-        s = s.loc[first.index]  # same genre order in every panel
+        s = s.loc[order]
         im = ax.imshow(s.to_numpy(), cmap=_DROP_CMAP, norm=norm, aspect="auto")
         for (r, c), v in np.ndenumerate(s.to_numpy()):
             if np.isfinite(v):
-                ax.text(c, r, f"{v:.0%}", ha="center", va="center", fontsize=6, color=INK)
+                ax.text(c, r, f"{100 * v:.0f}", ha="center", va="center", fontsize=6, color=INK)
         ax.set_xticks(range(s.shape[1]), s.columns, rotation=45, ha="right", fontsize=7, color=MUTED)
-        ax.set_yticks(range(s.shape[0]), s.index, fontsize=7, color=INK)
-        ax.set_title(title, fontsize=9, color=INK)
+        ax.set_yticks(range(s.shape[0]), [f"{g}  ({confidence[title][g]:.0%})" for g in s.index],
+                      fontsize=7, color=INK)
+        ax.set_title(f"{title}  (row label: average confidence in the true genre)", fontsize=8,
+                     color=INK)
         ax.set_xlabel(xlabel, fontsize=8, color=MUTED)
         for side in ax.spines.values():
             side.set_visible(False)
-    bar = fig.colorbar(im, ax=axes[0].tolist(), shrink=0.8)
-    bar.set_label("share of confidence in the true genre lost", fontsize=8, color=MUTED)
+    bar = fig.colorbar(im, ax=axes[0].tolist(), shrink=0.8, pad=0.02)
+    bar.set_label("drop in confidence (percentage points)", fontsize=8, color=MUTED)
     bar.ax.tick_params(labelsize=7, colors=MUTED)
+    bar.ax.yaxis.set_major_formatter(lambda v, _: f"{100 * v:.0f}")
     return fig
 
 
