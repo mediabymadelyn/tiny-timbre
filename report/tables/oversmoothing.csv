@@ -1,0 +1,10 @@
+name,group,sibling_cosine,map_all
+e0_cnn_flat,flat head,0.3735,0.2071
+e1_flat_s1,flat head,0.3864,0.204
+e1_flat_s2,flat head,0.3765,0.2089
+e1_gcn_s0,"GCN, 2 layers",0.8211,0.1853
+e1_gcn_s1,"GCN, 2 layers",0.8179,0.1918
+e1_gcn_s2,"GCN, 2 layers",0.8109,0.1849
+e2_gcn_cooc_s0,"GCN, 2 layers + co-occurrence edges",0.7991,0.1854
+e3_gcn_1layer_s0,"GCN, 1 layer",0.6659,0.1959
+e3_gcn_3layer_s0,"GCN, 3 layers",0.8082,0.1883

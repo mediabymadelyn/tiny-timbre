@@ -200,3 +200,77 @@ def test_plot_feature_maps_one_panel_per_channel():
     fig = plot_feature_maps(maps, channels=4)
     assert len(fig.axes) == 4
     matplotlib.pyplot.close(fig)
+
+
+# ---------------------------------------------------------------------------------------------
+# Gradient diagnostic and report figures
+# ---------------------------------------------------------------------------------------------
+
+from tiny_timbre.analyze import (detector_updates, encode_clips, mean_genre_ap,
+                                 plot_ap_difference, plot_ap_difference_vs_training_tracks,
+                                 plot_feature_maps_by_genre, plot_oversmoothing, update_summary)
+
+
+def test_detector_updates_flat_is_minus_the_gradient():
+    torch.manual_seed(0)
+    head = FlatHead(256, 5)
+    x, y = torch.randn(12, 256), torch.as_tensor(_fake_labels(12))
+    torch.nn.BCEWithLogitsLoss()(head(x), y).backward()
+    U = detector_updates(head, x, y)
+    np.testing.assert_allclose(U, -head.linear.weight.grad.numpy(), rtol=1e-4, atol=1e-7)
+
+
+def test_detector_updates_gcn_moves_every_detector():
+    torch.manual_seed(0)
+    head = GCNHead(normalize_adjacency(build_adjacency(GENRE_IDS, PARENTS)), num_layers=2)
+    x, y = torch.randn(12, 256), torch.as_tensor(_fake_labels(12))
+    U = detector_updates(head, x, y)
+    assert U.shape == (5, 256) and np.isfinite(U).all()
+    assert (np.linalg.norm(U, axis=1) > 0).all()
+
+
+def test_update_summary():
+    U = np.array([[2.0, 0.0], [2.0, 0.0], [0.0, 1.0]])  # rows 0 and 1 point the same way
+    s = update_summary(U, rare=[False, False, True], pairs=[(0, 1)])
+    assert s["rare_over_common"] == pytest.approx(0.5)
+    assert s["sibling_cosine"] == pytest.approx(1.0)
+
+
+def test_encode_clips_one_vector_per_row():
+    model = Model(head=FlatHead(256, 5))
+    mels = np.random.default_rng(0).uniform(-80, 0, (3, 128, 64)).astype(np.float16)
+    assert encode_clips(model, mels, np.array([0, 2])).shape == (2, 256)
+
+
+def test_mean_genre_ap_averages_runs(tmp_path):
+    Y = _fake_labels()
+    _save_fake_scores(tmp_path, "perfect", Y.copy(), Y)
+    _save_fake_scores(tmp_path, "inverted", 1 - Y, Y)
+    one = mean_genre_ap(["perfect"], tmp_path)
+    assert list(one.index) == GENRE_IDS and (one == 1.0).all()
+    both = mean_genre_ap(["perfect", "inverted"], tmp_path)
+    assert (both < 1.0).all()
+
+
+def test_report_figures_draw():
+    diff = pd.Series({"Rock": -0.01, "Classical": 0.09, "Pop": -0.03})
+    fig = plot_ap_difference(diff, pd.Series({"Rock": 710, "Classical": 62, "Pop": 119}))
+    assert len(fig.axes[0].patches) == 3  # one bar per genre
+    matplotlib.pyplot.close(fig)
+
+    fig = plot_ap_difference_vs_training_tracks(diff, pd.Series({"Rock": 5000, "Classical": 400, "Pop": 900}))
+    assert len(fig.axes[0].collections[0].get_offsets()) == 3
+    matplotlib.pyplot.close(fig)
+
+    points = pd.DataFrame({"group": ["flat head", "flat head", "GCN, 2 layers"],
+                           "sibling_cosine": [0.38, 0.37, 0.82], "map_all": [0.207, 0.204, 0.187]})
+    fig = plot_oversmoothing(points)
+    assert len(fig.axes[0].collections) == 2  # one group of dots per variant
+    assert fig.axes[0].get_legend().get_texts()[0].get_text() == "flat head (2 seeds)"
+    matplotlib.pyplot.close(fig)
+
+    model = Model(head=FlatHead(256, 5))
+    clips = {"Rock": np.full((128, 64), -40.0), "Jazz": np.full((128, 64), -20.0)}
+    fig = plot_feature_maps_by_genre(model, clips, channels=3)
+    assert len(fig.axes) == 2 * 4  # 2 rows: spectrogram + 3 channels
+    matplotlib.pyplot.close(fig)

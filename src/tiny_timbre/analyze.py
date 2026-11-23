@@ -10,19 +10,27 @@ notebooks/figures.ipynb calls these functions and saves the figures to report/fi
 
 Owner: Maddi
 """
+import copy
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from torch import nn
+from torch.utils.data import DataLoader
 
 from tiny_timbre.baseline import load_label_splits, score
-from tiny_timbre.evaluate import audit_disagreements
+from tiny_timbre.data import FMADataset
+from tiny_timbre.evaluate import audit_disagreements, per_genre_ap
 from tiny_timbre.gcn import FlatHead, GCNHead
 from tiny_timbre.labels import load_genres, load_tracks
 from tiny_timbre.model import Model
-from tiny_timbre.train import best_checkpoint_path, build_head
+from tiny_timbre.train import best_checkpoint_path, build_head, embed
+
+# Figure colors (validated colorblind-safe pair): the same model is the same color everywhere
+FLAT_COLOR, GCN_COLOR = "#2a78d6", "#eb6834"
+INK, MUTED, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -159,14 +167,16 @@ def load_best_model(config: dict, genre_ids, parents: dict) -> Model:
 # Training curves and gradient norms (from W&B)
 # ---------------------------------------------------------------------------------------------
 
-def fetch_history(entity: str, project: str, name: str) -> pd.DataFrame:
+def fetch_history(entity: str, project: str, name: str, base_url: str | None = None) -> pd.DataFrame:
     """One run's per-epoch log from W&B: columns epoch, train_loss, val_map, grad/... .
 
+    base_url: the W&B server, if not the default wandb.ai (ours: https://api.forge.coreweave.com).
     Needs the internet and a W&B login, so there is no test for it.
     """
     import wandb  # only needed here
 
-    runs = wandb.Api().runs(f"{entity}/{project}", filters={"display_name": name})
+    api = wandb.Api(overrides={"base_url": base_url} if base_url else {})
+    runs = api.runs(f"{entity}/{project}", filters={"display_name": name})
     if len(runs) == 0:
         raise ValueError(f"no W&B run named {name} in {entity}/{project}")
     history = runs[0].history(samples=10_000)  # every logged epoch, not a sample
@@ -178,12 +188,18 @@ def plot_curves(histories: dict[str, pd.DataFrame], metric: str):
 
     histories: {run name: DataFrame from fetch_history}. Returns the matplotlib Figure.
     """
+    from matplotlib.ticker import MaxNLocator
+
     fig, ax = plt.subplots(figsize=(5, 3.5))
     for name, h in histories.items():
-        ax.plot(h["epoch"] + 1, h[metric], label=name)  # +1: epochs counted from 1 on the plot
-    ax.set_xlabel("epoch")
-    ax.set_ylabel(metric)
-    ax.legend()
+        # flat runs blue, GCN runs orange, like every other figure
+        color = FLAT_COLOR if "flat" in name else GCN_COLOR if "gcn" in name else None
+        ax.plot(h["epoch"] + 1, h[metric], label=name, color=color, linewidth=2)  # epochs from 1
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))  # no "epoch 2.5"
+    ax.set_xlabel("epoch", fontsize=9, color=INK)
+    ax.set_ylabel(metric, fontsize=9, color=INK)
+    ax.legend(frameon=False, fontsize=8)
+    _style(ax)
     fig.tight_layout()
     return fig
 
@@ -239,5 +255,184 @@ def plot_feature_maps(maps: np.ndarray, channels: int = 8):
         ax.imshow(maps[c], origin="lower", aspect="auto")  # origin lower: low pitch at bottom
         ax.set_title(f"channel {c}", fontsize=8)
         ax.axis("off")
+    fig.tight_layout()
+    return fig
+
+
+def spectrogram_input(mel: np.ndarray) -> torch.Tensor:
+    """A cached (128, T) log-mel in dB -> the model's input (1, 1, 128, T), scaled like FMADataset."""
+    return ((torch.as_tensor(np.asarray(mel, dtype=np.float32)) + 40) / 40)[None, None]
+
+
+def plot_feature_maps_by_genre(model: Model, clips: dict[str, np.ndarray],
+                               titles: dict[str, str] | None = None, channels: int = 6,
+                               block: int = 2):
+    """One row per genre: the input spectrogram, then the same `channels` block-`block` maps.
+
+    clips: {genre: (128, T) log-mel in dB}. The channels shown are the most active ones on
+    average over all the clips, so every row shows the same channels.
+    """
+    maps = {g: feature_maps(model, spectrogram_input(m), block) for g, m in clips.items()}
+    activity = np.mean([fm.mean(axis=(1, 2)) for fm in maps.values()], axis=0)
+    shown = np.argsort(-activity)[:channels]  # most active channels first
+
+    fig, axes = plt.subplots(len(clips), channels + 1, figsize=(2.3 * (channels + 1), 2 * len(clips)),
+                             squeeze=False)
+    for row, (genre, mel) in enumerate(clips.items()):
+        axes[row, 0].imshow(mel, origin="lower", aspect="auto", cmap="magma")
+        name = f"{genre}: {titles[genre]}" if titles and genre in titles else genre
+        axes[row, 0].set_title(f"{name}\ninput log-mel, {mel.shape[0]} × {mel.shape[1]}", fontsize=8)
+        for col, c in enumerate(shown, start=1):
+            fm = maps[genre][c]
+            axes[row, col].imshow(fm, origin="lower", aspect="auto", cmap="viridis")
+            if row == 0:
+                axes[row, col].set_title(f"block {block}, channel {c}\n{fm.shape[0]} × {fm.shape[1]}",
+                                         fontsize=8)
+        for ax in axes[row]:
+            ax.set_xticks([])
+            ax.set_yticks([])
+    axes[-1, 0].set_xlabel("time →", fontsize=8)
+    axes[-1, 0].set_ylabel("pitch ↑", fontsize=8)
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------------------------------------------
+# Gradient diagnostic: how much does one training step change each genre's detector?
+# ---------------------------------------------------------------------------------------------
+
+def encode_clips(model: Model, mels, rows, batch_size: int = 16) -> torch.Tensor:
+    """The trained encoder's 256-number vector for each full 30 s clip in `rows` of mels."""
+    dataset = FMADataset(mels, rows, np.zeros((len(rows), 1), dtype=np.float32))  # labels unused
+    return torch.from_numpy(embed(model, DataLoader(dataset, batch_size=batch_size)))
+
+
+def detector_updates(head, x: torch.Tensor, y: torch.Tensor, eps: float = 1e-4) -> np.ndarray:
+    """(C, 256): how each genre's detector would change in one gradient step (per unit step size).
+
+    Flat head: a genre's detector is its own weight row, so this is minus its gradient row; only
+    that genre's examples move it. GCN head: the detectors are computed from weights shared by
+    all genres, so a step moves every detector at once; measured by nudging the weights a tiny
+    bit along the gradient and seeing how detectors() changes (central difference, float64).
+    x: encoder vectors (N, 256) for fixed clips; y: their 0/1 labels (N, C).
+    """
+    head = copy.deepcopy(head).double()
+    loss = nn.BCEWithLogitsLoss()(head(x.double()), torch.as_tensor(y).double())
+    params = list(head.parameters())
+    grads = torch.autograd.grad(loss, params)
+
+    def detectors_after(step: float) -> np.ndarray:  # detectors with weights moved by step × gradient
+        with torch.no_grad():
+            for p, g in zip(params, grads):
+                p.add_(step * g)
+            D = detectors(head).copy()  # copy: for the flat head this is the weight itself
+            for p, g in zip(params, grads):
+                p.sub_(step * g)  # put the weights back
+        return D
+
+    # a gradient-descent step moves the weights by -gradient
+    return (detectors_after(-eps) - detectors_after(eps)) / (2 * eps)
+
+
+def update_summary(U: np.ndarray, rare, pairs: list[tuple[int, int]]) -> dict[str, float]:
+    """rare_over_common: mean update size of rare genres ÷ that of common genres.
+    sibling_cosine: mean cosine between sibling genres' updates (1 = identical direction)."""
+    rare = np.asarray(rare, dtype=bool)
+    sizes = np.linalg.norm(U, axis=1)
+    return {"rare_over_common": float(sizes[rare].mean() / sizes[~rare].mean()),
+            "sibling_cosine": mean_pair_cosine(U, pairs)}
+
+
+# ---------------------------------------------------------------------------------------------
+# Report figures
+# ---------------------------------------------------------------------------------------------
+
+def mean_genre_ap(names: list[str], results_dir) -> pd.Series:
+    """Average precision per genre on the test split, averaged over runs (e.g. 3 seeds).
+
+    Indexed by genre id. Genres with no test positives are NaN.
+    """
+    aps = []
+    for name in names:
+        d = load_scores(results_dir, name)
+        aps.append(per_genre_ap(d["Y"], d["scores"]))
+    return pd.Series(np.mean(aps, axis=0), index=[int(g) for g in d["genre_ids"]])
+
+
+def _style(ax):
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(MUTED)
+    ax.tick_params(colors=MUTED, labelsize=8)
+    ax.grid(color=GRID, linewidth=0.8)
+    ax.set_axisbelow(True)
+
+
+def plot_ap_difference(diff: pd.Series, n_test: pd.Series | None = None, title: str = ""):
+    """Horizontal bars of GCN − flat AP (in points), one per genre, sorted.
+
+    Orange = the GCN is better, blue = the flat head is better (the models' own colors).
+    diff: indexed by genre name; n_test: number of test songs per genre, shown in the labels.
+    """
+    diff = diff.sort_values()
+    labels = [f"{g} ({int(n_test[g])})" if n_test is not None else g for g in diff.index]
+    fig, ax = plt.subplots(figsize=(5.5, 0.28 * len(diff) + 1.2))
+    colors = [GCN_COLOR if v > 0 else FLAT_COLOR for v in diff]
+    ax.barh(range(len(diff)), 100 * diff.to_numpy(), color=colors, height=0.7)
+    ax.set_yticks(range(len(diff)), labels)
+    ax.axvline(0, color=INK, linewidth=0.8)
+    ax.set_xlabel("GCN − flat, average precision (points)", fontsize=9, color=INK)
+    _style(ax)
+    ax.grid(axis="y", visible=False)
+    ax.text(0.99, 0.02, "GCN better →", transform=ax.transAxes, ha="right", fontsize=8, color=GCN_COLOR)
+    ax.text(0.01, 0.98, "← flat better", transform=ax.transAxes, ha="left", va="top", fontsize=8,
+            color=FLAT_COLOR)
+    if title:
+        ax.set_title(title, fontsize=10, color=INK, loc="left")
+    fig.tight_layout()
+    return fig
+
+
+def plot_ap_difference_vs_training_tracks(diff: pd.Series, train_counts: pd.Series,
+                                          rare_threshold: int = 200):
+    """One dot per genre: training tracks (log scale) vs GCN − flat AP (points)."""
+    fig, ax = plt.subplots(figsize=(5.5, 3.6))
+    d = 100 * diff.to_numpy()
+    ax.scatter(train_counts.to_numpy(), d, s=22, c=[GCN_COLOR if v > 0 else FLAT_COLOR for v in d],
+               edgecolors="white", linewidths=0.8)
+    ax.set_xscale("log")
+    ax.axhline(0, color=INK, linewidth=0.8)
+    ax.axvline(rare_threshold, color=MUTED, linewidth=0.8, linestyle="--")
+    ax.text(rare_threshold * 0.93, ax.get_ylim()[1], "rare  |  common", ha="center", va="top",
+            fontsize=8, color=MUTED)
+    ax.set_xlabel("training tracks per genre (log scale)", fontsize=9, color=INK)
+    ax.set_ylabel("GCN − flat AP (points)", fontsize=9, color=INK)
+    _style(ax)
+    fig.tight_layout()
+    return fig
+
+
+MARKERS = ["o", "^", "s", "D", "v", "P"]  # one shape per model variant, in order of appearance
+
+
+def plot_oversmoothing(points: pd.DataFrame):
+    """Sibling-detector cosine (x) vs test macro mAP (y), one dot per run.
+
+    points: columns group (e.g. "flat head", "GCN, 2 layers"), sibling_cosine, map_all.
+    Colour = head (flat blue, GCN orange); marker shape = variant, named in the legend.
+    """
+    fig, ax = plt.subplots(figsize=(5.5, 3.6))
+    for i, (group, part) in enumerate(points.groupby("group", sort=False)):
+        color = FLAT_COLOR if group.lower().startswith("flat") else GCN_COLOR
+        seeds = f" ({len(part)} seeds)" if len(part) > 1 else ""
+        ax.scatter(part["sibling_cosine"], 100 * part["map_all"], s=46, color=color,
+                   marker=MARKERS[i % len(MARKERS)], label=group + seeds, edgecolors="white",
+                   linewidths=1, zorder=3)
+    ax.set_xlabel("mean cosine similarity between sibling genres' detectors\n(higher = more over-smoothed)",
+                  fontsize=9, color=INK)
+    ax.set_ylabel("test macro mAP (points)", fontsize=9, color=INK)
+    ax.legend(frameon=False, fontsize=8, loc="lower left")
+    _style(ax)
     fig.tight_layout()
     return fig
