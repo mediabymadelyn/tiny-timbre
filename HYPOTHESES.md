@@ -56,7 +56,7 @@ validation, 15 failed clips dropped; 19,909 train / 2,572 test. The CNN is bette
 ### Verdicts
 
 <!-- Miranda / Ayesha: right direction (CNN wins), but by 4.3 points, not 5+. Maddi: predicted the opposite. -->
-- **Miranda:**
+- **Miranda:** Mixed. The CNN beat logistic regression, as I predicted, but by 4.3 points, not 5+.
 - **Maddi:** I originally predicted that the logistic regression would win by 5 points, but the cnn actually won by 4.3 points and was better on pretty much every metric. Learning features from the spectrograms worked a lot better than I expected with 20k music snippets.
 - **Ayesha:**
 
@@ -112,7 +112,7 @@ for flat), so it struggles to tell subgenres apart.
 <!-- Miranda / Ayesha: GCN lost 2 points instead of gaining 2-4, and lost most on rare genres; top-level did barely change.
      Maddi: right direction on rare (−2.5, not −6) and overall (slightly lower); common differs by 1.3 (not within 1); violations equal, not lower.
      Ayesha's violation part: equal, not lower for flat. -->
-- **Miranda:**
+- **Miranda:** I predicted a 2-4 point GCN gain on rare genres; it lost about 2 overall and most on rare genres. Top-level genres barely changed, as I predicted.
 - **Maddi:** I was right that the GCN would do worse on rare genres (-2.5 points though, not 6) and slightly worse overall (-2.0). E3;s over smoothing result backs up my original hypothesis about bluring genres, but I was still wrong about the common genres, which differd by 1.3 points, not within 1, and hierarchy violations were the same for both the CNN and GCN. 
 - **Ayesha:**
 
@@ -230,7 +230,7 @@ random, in every group; flat vs. GCN differs by about 1 point. _To confirm: Mira
 <!-- Miranda: GCN did not beat flat (slightly lower); both beat features.csv and random, supported.
      Maddi: flat > GCN > random right; features.csv was third, not first.
      Ayesha: flat and GCN swapped; rest right. -->
-- **Miranda:**
+- **Miranda:** GCN did not beat flat (about 1 point lower), but both beat features.csv and random, as I predicted.
 - **Maddi:** so the flat > GCN > random was rifht, and the fdlat vs GCN gap was the biggest for rare genres (1.0 pt vs 0.6 overall) as I had thought. but features csv came in third. the CNNS learned features beat the hand made ones. 
 - **Ayesha:**
 
