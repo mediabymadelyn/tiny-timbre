@@ -1,0 +1,7 @@
+run,head,rare_over_common,sibling_cosine
+e0_cnn_flat,flat,0.3999,0.7125
+e1_flat_s1,flat,0.3318,0.7749
+e1_flat_s2,flat,0.4256,0.6423
+e1_gcn_s0,gcn,0.7699,0.9457
+e1_gcn_s1,gcn,0.7251,0.9463
+e1_gcn_s2,gcn,0.7331,0.9416
