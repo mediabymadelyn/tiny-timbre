@@ -118,3 +118,12 @@ def test_load_splits_on_local_data():
         assert (index.loc[s["rows"], "track_id"].to_numpy() == s["track_ids"]).all()
         assert (index.loc[s["rows"], "split"] == name).all()
     assert sum(len(s["rows"]) for s in splits.values()) == (index["status"] == "ok").sum()
+
+
+def test_inputs_do_not_depend_on_labels():
+    """The model input must never contain the answer: changing every label leaves x unchanged."""
+    mels, rows, Y = _fake_mels()
+    x_zeros, y_zeros = FMADataset(mels, rows, np.zeros_like(Y), crop_frames=None)[0]
+    x_ones, y_ones = FMADataset(mels, rows, np.ones_like(Y), crop_frames=None)[0]
+    assert torch.equal(x_zeros, x_ones)        # input identical whatever the labels are
+    assert not torch.equal(y_zeros, y_ones)    # labels do differ, so the test is meaningful
