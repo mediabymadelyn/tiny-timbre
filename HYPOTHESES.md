@@ -292,8 +292,8 @@ Label each one as a model error, a debatable tag, or a likely wrong tag.
   wrong. Since I expect our from-scratch CNN to be fairly weak (E0), I think most disagreements will
   be the model's mistakes, but FMA's genre tags are chosen by the artists themselves, so some will
   be debatable or simply wrong.
-- **Result:** _pending (`analyze.audit_table`, then labelled by all three of us)_
-  - model errors: · debatable tags: · likely wrong tags:
+- **Result:** - **Result:** Audited run `e0_cnn_flat`: top 30 disagreements (27 distinct tracks), all missed tags. Labelled by Miranda.
+  - model errors: 8 · debatable tags: 10 · likely wrong tags: 12
 - **Verdicts:**
-  - **Miranda:**
+  - **Miranda:** I predicted 10 / 12 / 8 and got 8 / 10 / 12. All 30 rows were tags the model gave almost zero probability to, and 20 of them came from two artists (Glass Candy and Ed Saad), so the list reflects a few artists' tags more than the model overall. Glass Candy was pretty far from being Soul-RnB, I think it would be more in the Thrash or Punk genres.
   - **Maddi:**
