@@ -223,7 +223,7 @@ below the flat head.
 
 2,572 test queries, 22,413 train + validation candidates, cosine similarity; computed with
 `recommend.py` (through `demo.py`'s `Recommender.overall`). Ranking: flat > GCN > features.csv >
-random, in every group; flat vs. GCN differs by about 1 point. _To confirm: Miranda._
+random, in every group; flat vs. GCN differs by about 1 point.
 
 ### Verdicts
 
@@ -292,8 +292,8 @@ Label each one as a model error, a debatable tag, or a likely wrong tag.
   wrong. Since I expect our from-scratch CNN to be fairly weak (E0), I think most disagreements will
   be the model's mistakes, but FMA's genre tags are chosen by the artists themselves, so some will
   be debatable or simply wrong.
-- **Result:** - **Result:** Audited run `e0_cnn_flat`: top 30 disagreements (27 distinct tracks), all missed tags. Labelled by Miranda.
+- **Result:** Audited run `e0_cnn_flat`: top 30 disagreements (27 distinct tracks), all missed tags. Labelled by Miranda.
   - model errors: 8 · debatable tags: 10 · likely wrong tags: 12
 - **Verdicts:**
   - **Miranda:** I predicted 10 / 12 / 8 and got 8 / 10 / 12. All 30 rows were tags the model gave almost zero probability to, and 20 of them came from two artists (Glass Candy and Ed Saad), so the list reflects a few artists' tags more than the model overall. Glass Candy was pretty far from being Soul-RnB, I think it would be more in the Thrash or Punk genres.
-  - **Maddi:**
+  - **Maddi:** I predicted mostly model mistakes (15 / 10 / 5), but Miranda's labels came out 8 / 10 / 12, so more of the disagreements were questionable tags than actual model errors, the opposite of what I expected. Every row was a tag the model gave almost zero probability to, and 20 of the 30 rows came from just two artists (Glass Candy and Ed Saad), so this mostly says those artists' tags are off, not that FMA's tags are bad overall. It's also one person's labels, so the split is rough. (not supported)

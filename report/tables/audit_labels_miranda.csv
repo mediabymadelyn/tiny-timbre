@@ -1,0 +1,31 @@
+track_id,title,artist,genre_id,genre,human_tag,model_prob,kind,label,notes,listened
+59068,"Brownie, You're Doing a Heck of a Job",Ted Hearne,322,Composed Music,1,6.28e-06,model_missed_tag,model error,"male voice, repetitive lyrics, dramatic",yes
+134796,Eraser,Pianochocolate,267,New Age,1,1.21e-05,model_missed_tag,model error,"female/vocaloid esque vocals, new age",yes
+739,Hurt,Glass Candy,14,Soul-RnB,1,2.34e-05,model_missed_tag,likely wrong tag,"female vocals, intense, raspy",yes
+767,Love On a Plate,Glass Candy,14,Soul-RnB,1,3.04e-05,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy, intense",yes
+769,The Screamers,Glass Candy,14,Soul-RnB,1,3.25e-05,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy, intense",yes
+61821,WALKING WITH SAAD,Ed Saad,361,Thrash,1,3.6e-05,model_missed_tag,debatable tag,"male speaking, no instrument/background",yes
+762,Crystal Migraine,Glass Candy,14,Soul-RnB,1,3.72e-05,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy, intense",yes
+765,Love Love Love,Glass Candy,14,Soul-RnB,1,5.41e-05,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy, intense",yes
+61815,OVER FIVE YEARS,Ed Saad,361,Thrash,1,6.34e-05,model_missed_tag,debatable tag,"male speaking, no instrument/background",yes
+43150,Windmills & Lantarnlights,Julien Mier,468,Dubstep,1,6.79e-05,model_missed_tag,model error,"electronic, groovy, light vocals",yes
+755,Love On a Plate,Glass Candy,14,Soul-RnB,1,7.12e-05,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy",yes
+760,Empty V,Glass Candy,14,Soul-RnB,1,7.19e-05,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy",yes
+773,Nite Nurses,Glass Candy,14,Soul-RnB,1,7.27e-05,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy",yes
+753,track 5,Glass Candy,14,Soul-RnB,1,9.97e-05,model_missed_tag,debatable tag,"light vocals, strong saxophone/trumpet/piano sounds",yes
+61820,THRASHMETAL,Ed Saad,361,Thrash,1,0.0001004070509,model_missed_tag,debatable tag,"male speaking, no instruments/background",yes
+61807,HIT STOP WHEN YER DONE,Ed Saad,361,Thrash,1,0.0001010696869,model_missed_tag,debatable tag,"male speaking, no instruments/background",yes
+751,Love Love Love,Glass Candy,14,Soul-RnB,1,0.0001225504093,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy",yes
+24059,Nissa La Bella (Live),Je deviens dj en 3 jours,297,Chip Music,1,0.0001254121162,model_missed_tag,model error,"sounds from video games, electronic",yes
+59068,"Brownie, You're Doing a Heck of a Job",Ted Hearne,5,Classical,1,0.000135958282,model_missed_tag,debatable tag,male vocals,yes
+771,Brittle Woman,Glass Candy,14,Soul-RnB,1,0.0001444601512,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy",yes
+61821,WALKING WITH SAAD,Ed Saad,98,Progressive,1,0.000158817842,model_missed_tag,debatable tag,"male speaking, no instruments",yes
+764,Be a Dolly,Glass Candy,14,Soul-RnB,1,0.0001628168102,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy",yes
+59068,"Brownie, You're Doing a Heck of a Job",Ted Hearne,659,Contemporary Classical,1,0.0001643228024,model_missed_tag,model error,male vocals,yes
+61806,FRUSTRATED,Ed Saad,98,Progressive,1,0.0001692296064,model_missed_tag,model error,"male speaking, no instruments",yes
+28692,You A Grave,The Black Bug,88,New Wave,1,0.0001699838758,model_missed_tag,model error,"electronic, intense",yes
+61817,SAAD SPEAKS,Ed Saad,361,Thrash,1,0.0001728047064,model_missed_tag,debatable tag,"male speaking, no instruments",yes
+94093,prologue: in recollection and amazement,Westy Reflector,111,Power-Pop,1,0.0001875674643,model_missed_tag,debatable tag,"no vocals, instrumental is indie pop",yes
+10230,Function Boys,Lucky Dragons,1235,Instrumental,1,0.0001891201391,model_missed_tag,debatable tag,"piano, some distortion and baby sounds?",yes
+12690,L'Anchoïade,Bo Marley + Disrupt + Volfoniq,79,Reggae - Dub,1,0.000206074983,model_missed_tag,model error,funky/groocy electronic,yes
+763,Love Love Love,Glass Candy,14,Soul-RnB,1,0.0002126323379,model_missed_tag,likely wrong tag,"female vocals, guitar/drum heavy",yes

@@ -78,7 +78,34 @@ runs resume from `checkpoints/<name>.pt`. On Colab, use `notebooks/train_colab.i
 | `configs/e2_gcn_cooc_s0.yaml` | E2: tree + co-occurrence edges (compare with `e1_gcn_s0`) |
 | `configs/e3_gcn_1layer_s0.yaml`, `e3_gcn_3layer_s0.yaml` | E3: GCN depth 1 and 3 (2 layers is `e1_gcn_s0`) |
 
-_TODO: results table, links to the W&B runs, peak GPU memory and the machine the reported results were run on._
+## Results
+
+Test split (2,572 songs), best-on-validation epoch of each run, macro mAP (higher is better).
+Rare = genres with fewer than 200 training songs. Full numbers: `report/tables/results_all_runs.csv`;
+predictions and verdicts: `HYPOTHESES.md`.
+
+| Run | Exp. | Model | mAP | top-level | fine-grained | rare | common | micro-F1 | W&B |
+|---|---|---|---|---|---|---|---|---|---|
+| `e0_baseline` | E0 | logistic regression | 0.164 | 0.436 | 0.113 | 0.074 | 0.260 | 0.396 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/6crzp743) |
+| `e0_cnn_flat` | E0, E1 | CNN + flat, seed 0 | 0.207 | 0.475 | 0.157 | 0.112 | 0.309 | 0.434 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/925958f0) |
+| `e1_flat_s1` | E1 | CNN + flat, seed 1 | 0.204 | 0.478 | 0.153 | 0.108 | 0.307 | 0.446 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/fb5efe0d) |
+| `e1_flat_s2` | E1 | CNN + flat, seed 2 | 0.209 | 0.477 | 0.159 | 0.117 | 0.307 | 0.436 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/2d4e5129) |
+| `e1_gcn_s0` | E1–E3 | CNN + GCN (tree, 2 layers), seed 0 | 0.185 | 0.466 | 0.133 | 0.085 | 0.293 | 0.477 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/38afef60) |
+| `e1_gcn_s1` | E1 | CNN + GCN, seed 1 | 0.192 | 0.492 | 0.136 | 0.090 | 0.300 | 0.418 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/3ef877ea) |
+| `e1_gcn_s2` | E1 | CNN + GCN, seed 2 | 0.185 | 0.487 | 0.128 | 0.087 | 0.290 | 0.434 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/fe0b74b7) |
+| `e2_gcn_cooc_s0` | E2 | GCN, tree + co-occurrence edges | 0.185 | 0.469 | 0.132 | 0.081 | 0.296 | 0.474 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/8022093b) |
+| `e3_gcn_1layer_s0` | E3 | GCN, 1 layer | 0.196 | 0.474 | 0.144 | 0.098 | 0.300 | 0.450 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/98bff089) |
+| `e3_gcn_3layer_s0` | E3 | GCN, 3 layers | 0.188 | 0.479 | 0.134 | 0.082 | 0.302 | 0.423 | [run](https://forge.coreweave.com/wandb/tiny-timbre-team/tiny-timbre/runs/edd75a89) |
+
+**Mean ± std over 3 seeds (E1):** flat 0.207 ± 0.002 vs. GCN 0.187 ± 0.004 overall; rare genres
+0.112 vs. 0.087; fine-grained 0.156 vs. 0.132; top-level 0.477 vs. 0.481. The GCN loses, mostly
+on rare and fine-grained genres (`report/figures/oversmoothing.png` shows why).
+
+**Machine:** every CNN run trained on Google Colab with one NVIDIA Tesla T4 GPU (16 GB), 20 epochs;
+peak GPU memory about 3.6 GB (22% of the T4), from W&B's system metrics. The logistic regression
+ran on a laptop CPU and was uploaded to W&B afterwards (no training curves). W&B also holds a
+`sanity` run (1,000 clips) and a failed first attempt at `e1_gcn_s2` (`81d611f8`, epochs 1–4; training
+continued from its epoch-4 checkpoint in the run linked above).
 
 ## Interpretability (exploratory)
 
